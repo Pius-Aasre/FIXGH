@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("CITIZEN")
+  createdAt    DateTime @default(now())
+
+  reports      Report[]
+}
+
+model Report {
+  id              String   @id @default(uuid())
+  title           String
+  description     String
+  imageUrl        String?
+  category        String?
+  aiPriorityScore String?  // e.g., "HIGH", "MEDIUM", "LOW"
+  status          String   @default("PENDING") // PENDING, VERIFIED, IN_PROGRESS, COMPLETED
+  latitude        Float?
+  longitude       Float?
+  createdAt       DateTime @default(now())
+
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+}
+
+model NewsPost {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  imageUrl    String?
+  publishedAt DateTime @default(now())
+}
+
+model Authority {
+  id             String   @id @default(uuid())
+  departmentName String
+  emailAddress   String   @unique
+}

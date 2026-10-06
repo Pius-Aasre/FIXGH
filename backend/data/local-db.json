@@ -1,0 +1,158 @@
+{
+  "users": {
+    "id_1791162919866_6skv1": {
+      "email": "test@example.com",
+      "name": "Test",
+      "id": "id_1791162919866_6skv1"
+    },
+    "doc_1791162945929_n4z19": {
+      "email": "citizen@fixgh.org",
+      "name": "Kwesi Appiah",
+      "id": "doc_1791162945929_n4z19"
+    },
+    "doc_1791163092720_azde3": {
+      "name": "Kofi Mensah",
+      "email": "kofi.mensah@fixgh.org",
+      "passwordHash": "$2b$12$JKJncb.HkQHjCCFlxJzlQeIjd.88QoYNqRlAKpqzFUe/FQI30Pefu",
+      "role": "CITIZEN",
+      "createdAt": "2026-10-05T01:18:12.718Z",
+      "id": "doc_1791163092720_azde3"
+    },
+    "doc_1791179603666_7z1og": {
+      "name": "Pius",
+      "email": "piusasare45@gmail.com",
+      "passwordHash": "$2b$12$nIaMOGwNNoPFNSCaRwitd.ud.dde7mulFPXYyJiFBCNXxHRa0MQb6",
+      "role": "CITIZEN",
+      "createdAt": "2026-10-05T05:53:23.665Z",
+      "id": "doc_1791179603666_7z1og"
+    },
+    "doc_1791258386640_az7bb": {
+      "name": "anabel",
+      "email": "piusasare47@gmail.com",
+      "passwordHash": "$2b$12$BW/VMDJeHNFzVSJMAwkqr.FQVtImdTX8kR9eeSeoAZQ/u1I8oBoBC",
+      "role": "CITIZEN",
+      "createdAt": "2026-10-06T03:46:26.636Z",
+      "id": "doc_1791258386640_az7bb"
+    }
+  },
+  "authorities": {
+    "roads_fixgh_org": {
+      "departmentName": "Ministry of Roads and Highways",
+      "emailAddress": "roads@fixgh.org",
+      "id": "roads_fixgh_org"
+    },
+    "water_fixgh_org": {
+      "departmentName": "Ghana Water Company Limited (GWCL)",
+      "emailAddress": "water@fixgh.org",
+      "id": "water_fixgh_org"
+    },
+    "power_fixgh_org": {
+      "departmentName": "Electricity Company of Ghana (ECG)",
+      "emailAddress": "power@fixgh.org",
+      "id": "power_fixgh_org"
+    },
+    "sanitation_fixgh_org": {
+      "departmentName": "Ministry of Sanitation",
+      "emailAddress": "sanitation@fixgh.org",
+      "id": "sanitation_fixgh_org"
+    }
+  },
+  "reports": {
+    "doc_1791179726279_0wrsw": {
+      "title": "Damaged street ligts at ofankor barrier",
+      "description": "Its been damaged for years now",
+      "category": "Streetlight Out",
+      "latitude": null,
+      "longitude": null,
+      "imageUrl": null,
+      "aiPriorityScore": "MEDIUM",
+      "status": "PENDING",
+      "userId": "doc_1791179603666_7z1og",
+      "createdAt": "2026-10-05T05:55:26.277Z",
+      "id": "doc_1791179726279_0wrsw"
+    },
+    "doc_1791179751209_xfwis": {
+      "title": "Damaged street ligts at ofankor barrier",
+      "description": "Its been damaged for years now",
+      "category": "Streetlight Out",
+      "latitude": null,
+      "longitude": null,
+      "imageUrl": null,
+      "aiPriorityScore": "MEDIUM",
+      "status": "PENDING",
+      "userId": "doc_1791179603666_7z1og",
+      "createdAt": "2026-10-05T05:55:51.207Z",
+      "id": "doc_1791179751209_xfwis"
+    },
+    "doc_1791259209710_zgqnh": {
+      "title": "Pot wholes",
+      "description": "There are pot wholes arround dome area",
+      "category": "Other",
+      "locationText": "Dome",
+      "latitude": null,
+      "longitude": null,
+      "imageUrl": null,
+      "aiPriorityScore": "MEDIUM",
+      "status": "PENDING",
+      "userId": "doc_1791179603666_7z1og",
+      "createdAt": "2026-10-06T04:00:09.708Z",
+      "id": "doc_1791259209710_zgqnh"
+    },
+    "doc_1791259279779_v6j6u": {
+      "title": "Pot wholes",
+      "description": "There are pot wholes arround dome area",
+      "category": "Other",
+      "locationText": "Dome",
+      "latitude": null,
+      "longitude": null,
+      "imageUrl": null,
+      "aiPriorityScore": "MEDIUM",
+      "status": "PENDING",
+      "userId": "doc_1791179603666_7z1og",
+      "createdAt": "2026-10-06T04:01:19.777Z",
+      "id": "doc_1791259279779_v6j6u"
+    },
+    "doc_1791259285887_93kbm": {
+      "title": "Pot wholes",
+      "description": "There are pot wholes arround dome area",
+      "category": "Other",
+      "locationText": "Dome",
+      "latitude": null,
+      "longitude": null,
+      "imageUrl": null,
+      "aiPriorityScore": "MEDIUM",
+      "status": "PENDING",
+      "userId": "doc_1791179603666_7z1og",
+      "createdAt": "2026-10-06T04:01:25.885Z",
+      "id": "doc_1791259285887_93kbm"
+    },
+    "doc_1791260041751_l9dgd": {
+      "title": "Deep potholes",
+      "description": "There are deep potholes on the road from ofankor barrier leading to Amasaman",
+      "category": "Pothole",
+      "locationText": "Ofankor barrier",
+      "latitude": null,
+      "longitude": null,
+      "imageUrl": null,
+      "aiPriorityScore": "MEDIUM",
+      "status": "PENDING",
+      "userId": "doc_1791179603666_7z1og",
+      "createdAt": "2026-10-06T04:14:01.750Z",
+      "id": "doc_1791260041751_l9dgd"
+    },
+    "doc_1791260044512_nu19p": {
+      "title": "Deep potholes",
+      "description": "There are deep potholes on the road from ofankor barrier leading to Amasaman",
+      "category": "Pothole",
+      "locationText": "Ofankor barrier",
+      "latitude": null,
+      "longitude": null,
+      "imageUrl": null,
+      "aiPriorityScore": "MEDIUM",
+      "status": "PENDING",
+      "userId": "doc_1791179603666_7z1og",
+      "createdAt": "2026-10-06T04:14:04.510Z",
+      "id": "doc_1791260044512_nu19p"
+    }
+  }
+}
