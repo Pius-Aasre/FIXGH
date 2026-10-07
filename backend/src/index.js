@@ -23,9 +23,14 @@ if (!process.env.JWT_SECRET) {
 const authRoutes = require('./routes/auth');
 const reportRoutes = require('./routes/reports');
 const newsRoutes = require('./routes/news');
+const adminRoutes = require('./routes/admin');
+const { initScheduledJobs } = require('./services/cron');
 const { apiLimiter, authLimiter, reportLimiter } = require('./middleware/rate-limit');
 
 const app = express();
+
+// Initialize scheduled background jobs (e.g. monthly authority digest)
+initScheduledJobs();
 
 // 1. Security Headers via Helmet
 app.use(helmet());
@@ -54,6 +59,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api', reportLimiter, reportRoutes);
 app.use('/api', newsRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 7. 404 Handler
 app.use((req, res) => {

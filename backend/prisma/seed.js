@@ -1,44 +1,32 @@
 'use strict';
 
 const { PrismaClient } = require('@prisma/client');
+const { AUTHORITIES } = require('../src/constants/authorities');
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding initial authority contacts...');
+  console.log(`Seeding all ${AUTHORITIES.length} official Ghanaian authorities into Prisma...`);
 
-  const authorities = [
-    {
-      departmentName: 'Ministry of Roads and Highways',
-      emailAddress: process.env.TEST_AUTHORITY_EMAIL || 'roads@fixgh.org',
-    },
-    {
-      departmentName: 'Ghana Water Company Limited (GWCL)',
-      emailAddress: 'water@fixgh.org',
-    },
-    {
-      departmentName: 'Electricity Company of Ghana (ECG)',
-      emailAddress: 'power@fixgh.org',
-    },
-    {
-      departmentName: 'Ministry of Sanitation',
-      emailAddress: 'sanitation@fixgh.org',
-    },
-  ];
-
-  for (const auth of authorities) {
+  for (const auth of AUTHORITIES) {
     await prisma.authority.upsert({
-      where: { emailAddress: auth.emailAddress },
-      update: { departmentName: auth.departmentName },
-      create: auth,
+      where: { emailAddress: auth.email },
+      update: {
+        departmentName: auth.name,
+      },
+      create: {
+        id: `auth_${auth.id}`,
+        departmentName: auth.name,
+        emailAddress: auth.email,
+      },
     });
   }
 
-  console.log(`Seeded ${authorities.length} department authorities successfully!`);
+  console.log(`Successfully seeded ${AUTHORITIES.length} department authorities into Prisma!`);
 }
 
 main()
   .catch((e) => {
-    console.error('Seeding error:', e);
+    console.error('Prisma seeding error:', e);
     process.exit(1);
   })
   .finally(async () => {

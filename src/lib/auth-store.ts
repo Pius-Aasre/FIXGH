@@ -13,7 +13,7 @@ type AuthStore = {
 
 let _user: User | null = null;
 let _token: string | null = null;
-let _listeners: Array<() => void> = [];
+let _listeners: (() => void)[] = [];
 
 function notify() {
   _listeners.forEach(fn => fn());

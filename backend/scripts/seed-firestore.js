@@ -2,47 +2,37 @@
 
 require('dotenv').config();
 const { getDb } = require('../src/lib/firebase');
+const { AUTHORITIES } = require('../src/constants/authorities');
 
 async function main() {
   const db = getDb();
   if (!db) {
-    console.error('Firebase is not initialized. Please ensure serviceAccountKey.json or FIREBASE_* variables are set in .env');
+    console.error('Database is not initialized. Please ensure Firebase or local-db is configured.');
     process.exit(1);
   }
 
-  console.log('Seeding initial authority contacts into Cloud Firestore...');
+  console.log(`Seeding ${AUTHORITIES.length} official Ghanaian authorities into database...`);
 
-  const authorities = [
-    {
-      departmentName: 'Ministry of Roads and Highways',
-      emailAddress: process.env.TEST_AUTHORITY_EMAIL || 'roads@fixgh.org',
-    },
-    {
-      departmentName: 'Ghana Water Company Limited (GWCL)',
-      emailAddress: 'water@fixgh.org',
-    },
-    {
-      departmentName: 'Electricity Company of Ghana (ECG)',
-      emailAddress: 'power@fixgh.org',
-    },
-    {
-      departmentName: 'Ministry of Sanitation',
-      emailAddress: 'sanitation@fixgh.org',
-    },
-  ];
+  for (const auth of AUTHORITIES) {
+    const docId = `auth_${auth.id}`;
+    const payload = {
+      id: auth.id,
+      departmentName: auth.name,
+      emailAddress: auth.email,
+      category: auth.category,
+      reportTypes: auth.reportTypes,
+      updatedAt: new Date().toISOString(),
+    };
 
-  for (const auth of authorities) {
-    // Upsert by checking if document with email exists or using email as doc ID
-    const docId = auth.emailAddress.replace(/[^a-zA-Z0-9]/g, '_');
-    await db.collection('authorities').doc(docId).set(auth, { merge: true });
-    console.log(`✓ Seeded authority: ${auth.departmentName} (${auth.emailAddress})`);
+    await db.collection('authorities').doc(docId).set(payload, { merge: true });
+    console.log(`✓ [${auth.id}/40] Seeded: ${auth.name} <${auth.email}>`);
   }
 
-  console.log('Firestore seeding completed successfully!');
+  console.log(`\nSuccessfully seeded all ${AUTHORITIES.length} authorities!`);
   process.exit(0);
 }
 
 main().catch((err) => {
-  console.error('Firestore seeding failed:', err);
+  console.error('Seeding failed:', err);
   process.exit(1);
 });

@@ -41,6 +41,7 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingReports(true);
     setReportsError(null);
     api.reports

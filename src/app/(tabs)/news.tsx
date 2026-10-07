@@ -17,7 +17,6 @@ import { api, NewsItem, NewsSource } from '../../lib/api';
 
 // Ghana flag colours
 const GH_RED   = '#CE1126';
-const GH_GOLD  = '#FCD116';
 const GH_GREEN = '#006B3F';
 const GH_BLACK = '#1A1A1A';
 
@@ -121,6 +120,7 @@ export default function NewsScreen() {
   }, [selectedSource]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadArticles(selectedSource, false);
   }, [selectedSource, loadArticles]);
 
@@ -129,7 +129,7 @@ export default function NewsScreen() {
     loadArticles(selectedSource, true);
   };
 
-  const openArticle = (url?: string) => {
+  const openArticle = useCallback((url?: string) => {
     if (!url || typeof url !== 'string') return;
     try {
       Linking.openURL(url).catch((err) => {
@@ -138,7 +138,7 @@ export default function NewsScreen() {
     } catch (e: any) {
       console.warn('Link open exception:', e?.message);
     }
-  };
+  }, []);
 
   const renderHeader = () => (
     <View style={styles.topSection}>

@@ -19,7 +19,7 @@ export default function HomeScreen() {
         </View>
         <View style={styles.headerBody}>
           <Text style={styles.title}>FixGH 🇬🇭</Text>
-          <Text style={styles.subtitle}>Report. Track. Fix Ghana's Infrastructure.</Text>
+          <Text style={styles.subtitle}>Report. Track. Fix Ghana&apos;s Infrastructure.</Text>
         </View>
       </View>
 

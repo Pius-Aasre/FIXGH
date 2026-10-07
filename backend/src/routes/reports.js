@@ -5,7 +5,7 @@ const multer = require('multer');
 const { getDb } = require('../lib/firebase');
 const authMiddleware = require('../middleware/auth');
 const { uploadImage } = require('../services/cloudinary');
-const { scorePriority, categorizeReport } = require('../services/ai');
+const { classifyAndRoute } = require('../services/ai');
 const { sendAuthorityEmail } = require('../services/email');
 
 const router = express.Router();
@@ -52,7 +52,7 @@ function uploadMiddleware(req, res, next) {
  * POST /api/reports
  * Protected by JWT auth
  * Multipart form: title, description, locationText, latitude, longitude, image (optional)
- * Category is now assigned automatically by the AI — no user input needed.
+ * AI organizes, filters spam, categorizes, and assigns to the right authority among all 40 public bodies.
  */
 router.post('/reports', authMiddleware, uploadMiddleware, async (req, res) => {
   const { title, description, locationText, latitude, longitude } = req.body || {};
@@ -96,35 +96,41 @@ router.post('/reports', authMiddleware, uploadMiddleware, async (req, res) => {
   }
 
   try {
-    // 3. Secure upload to Cloudinary if image is attached
+    // 3. Upload to Cloudinary if image is attached
     let imageUrl = null;
     if (req.file) {
       const safeFilename = `report-${Date.now()}.${req.file.mimetype.split('/')[1] || 'jpg'}`;
       imageUrl = await uploadImage(req.file.buffer, safeFilename);
     }
 
-    // 4. AI auto-categorise the complaint
-    const aiCategory = await categorizeReport(title.trim(), description.trim());
-
-    // 5. AI Priority score
-    const aiPriorityScore = await scorePriority(
-      aiCategory,
+    // 4. AI Complaint Filter, Categorization, and Authority Routing
+    const aiResult = await classifyAndRoute(
+      title.trim(),
       description.trim(),
-      lat,
-      lng
+      (locationText || '').trim()
     );
 
-    // 6. Save report in Firestore
+    const filterStatus = aiResult.isValid ? 'APPROVED' : 'SPAM';
+    const assignedAuthority = aiResult.authority;
+
+    // 5. Construct Report Record
     const reportData = {
       title: title.trim(),
       description: description.trim(),
-      category: aiCategory,
+      category: aiResult.category || 'General',
       locationText: (locationText || '').trim() || null,
       latitude: lat,
       longitude: lng,
       imageUrl,
-      aiPriorityScore,
+      aiPriorityScore: aiResult.priority || 'MEDIUM',
+      confidence: aiResult.confidence || 0.8,
       status: 'PENDING',
+      filterStatus,
+      filterReason: aiResult.filterReason || null,
+      assignedAuthorityId: assignedAuthority ? assignedAuthority.id : null,
+      assignedAuthorityName: assignedAuthority ? assignedAuthority.name : null,
+      assignedAuthorityEmail: assignedAuthority ? assignedAuthority.email : null,
+      monthlyDigestSentAt: null,
       userId: req.user.id,
       createdAt: new Date().toISOString(),
     };
@@ -132,19 +138,21 @@ router.post('/reports', authMiddleware, uploadMiddleware, async (req, res) => {
     const docRef = await db.collection('reports').add(reportData);
     const report = { id: docRef.id, ...reportData };
 
-    // 7. Authority notification email (non-blocking)
-    try {
-      const authSnapshot = await db.collection('authorities').limit(1).get();
-      if (!authSnapshot.empty) {
-        const authority = authSnapshot.docs[0].data();
+    // 6. Optional instant notification for EMERGENCY level reports
+    if (aiResult.isValid && aiResult.priority === 'EMERGENCY' && assignedAuthority) {
+      try {
         const userDoc = await db.collection('users').doc(req.user.id).get();
         const citizen = userDoc.exists
           ? userDoc.data()
           : { name: 'Citizen', email: req.user.email };
-        await sendAuthorityEmail(authority, report, citizen);
+        await sendAuthorityEmail(
+          { emailAddress: assignedAuthority.email, departmentName: assignedAuthority.name },
+          report,
+          citizen
+        );
+      } catch (emailErr) {
+        console.warn('Instant emergency authority email skipped:', emailErr.message);
       }
-    } catch (emailErr) {
-      console.warn('Authority email notification skipped:', emailErr.message);
     }
 
     return res.status(201).json({ report });

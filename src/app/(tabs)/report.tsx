@@ -32,11 +32,10 @@ export default function ReportScreen() {
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState<string | null>(null);
   const [success, setSuccess]           = useState(false);
-  const [gpsStatus, setGpsStatus]       = useState<'idle' | 'fetching' | 'got' | 'denied'>('idle');
+  const [gpsStatus, setGpsStatus]       = useState<'idle' | 'fetching' | 'got' | 'denied'>('fetching');
 
   // Try to auto-detect GPS in the background — purely optional
   useEffect(() => {
-    setGpsStatus('fetching');
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -144,7 +143,7 @@ export default function ReportScreen() {
           <Ionicons name="megaphone" size={28} color={GH_RED} />
           <View style={styles.headerText}>
             <Text style={styles.title}>Report an Issue</Text>
-            <Text style={styles.subtitle}>Help fix Ghana's infrastructure</Text>
+            <Text style={styles.subtitle}>Help fix Ghana&apos;s infrastructure</Text>
           </View>
         </View>
       </View>

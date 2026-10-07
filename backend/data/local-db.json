@@ -55,6 +55,326 @@
       "departmentName": "Ministry of Sanitation",
       "emailAddress": "sanitation@fixgh.org",
       "id": "sanitation_fixgh_org"
+    },
+    "auth_1": {
+      "id": "auth_1",
+      "departmentName": "Ghana Police Service",
+      "emailAddress": "hq.pro@police.gov.gh",
+      "category": "Security & Law Enforcement",
+      "reportTypes": "Crime, theft, assault, threats, security",
+      "updatedAt": "2026-10-07T12:32:17.129Z"
+    },
+    "auth_2": {
+      "id": "auth_2",
+      "departmentName": "Ghana National Fire Service",
+      "emailAddress": "info@gnfs.gov.gh",
+      "category": "Fire & Rescue",
+      "reportTypes": "Fire, fire hazards",
+      "updatedAt": "2026-10-07T12:32:17.134Z"
+    },
+    "auth_3": {
+      "id": "auth_3",
+      "departmentName": "National Ambulance Service",
+      "emailAddress": "nas@nas.gov.gh",
+      "category": "Emergency Health & Rescue",
+      "reportTypes": "Medical emergencies",
+      "updatedAt": "2026-10-07T12:32:17.136Z"
+    },
+    "auth_4": {
+      "id": "auth_4",
+      "departmentName": "Environmental Protection Authority",
+      "emailAddress": "info@epa.gov.gh",
+      "category": "Environment & Pollution",
+      "reportTypes": "Pollution, environmental damage",
+      "updatedAt": "2026-10-07T12:32:17.138Z"
+    },
+    "auth_5": {
+      "id": "auth_5",
+      "departmentName": "Food and Drugs Authority",
+      "emailAddress": "fda@fda.gov.gh",
+      "category": "Public Health & Consumer Safety",
+      "reportTypes": "Unsafe food, drugs, cosmetics",
+      "updatedAt": "2026-10-07T12:32:17.139Z"
+    },
+    "auth_6": {
+      "id": "auth_6",
+      "departmentName": "Electricity Company of Ghana",
+      "emailAddress": "ecgho@ecggh.com",
+      "category": "Electricity Infrastructure",
+      "reportTypes": "Power outages, electrical infrastructure",
+      "updatedAt": "2026-10-07T12:32:17.141Z"
+    },
+    "auth_7": {
+      "id": "auth_7",
+      "departmentName": "Ghana Water Company",
+      "emailAddress": "info@gwcl.com.gh",
+      "category": "Water Infrastructure",
+      "reportTypes": "Water supply, damaged water infrastructure",
+      "updatedAt": "2026-10-07T12:32:17.144Z"
+    },
+    "auth_8": {
+      "id": "auth_8",
+      "departmentName": "Public Utilities Regulatory Commission",
+      "emailAddress": "info@purc.com.gh",
+      "category": "Utilities Regulation & Consumer Rights",
+      "reportTypes": "Electricity/water utility complaints",
+      "updatedAt": "2026-10-07T12:32:17.147Z"
+    },
+    "auth_9": {
+      "id": "auth_9",
+      "departmentName": "National Communications Authority",
+      "emailAddress": "info@nca.org.gh",
+      "category": "Telecommunications",
+      "reportTypes": "Telecom/network complaints",
+      "updatedAt": "2026-10-07T12:32:17.149Z"
+    },
+    "auth_10": {
+      "id": "auth_10",
+      "departmentName": "Driver and Vehicle Licensing Authority",
+      "emailAddress": "info@dvla.gov.gh",
+      "category": "Transport Licensing",
+      "reportTypes": "Driver/licensing/vehicle issues",
+      "updatedAt": "2026-10-07T12:32:17.151Z"
+    },
+    "auth_11": {
+      "id": "auth_11",
+      "departmentName": "National Road Safety Authority",
+      "emailAddress": "info@nrsa.gov.gh",
+      "category": "Road Safety",
+      "reportTypes": "Road safety problems",
+      "updatedAt": "2026-10-07T12:32:17.154Z"
+    },
+    "auth_12": {
+      "id": "auth_12",
+      "departmentName": "Department of Urban Roads",
+      "emailAddress": "info@dur.gov.gh",
+      "category": "Urban Roads & Streets",
+      "reportTypes": "Roads, potholes, urban road infrastructure",
+      "updatedAt": "2026-10-07T12:32:17.156Z"
+    },
+    "auth_13": {
+      "id": "auth_13",
+      "departmentName": "Ghana Highway Authority",
+      "emailAddress": "info@highways.gov.gh",
+      "category": "Highways & Trunk Infrastructure",
+      "reportTypes": "Major highways/road infrastructure",
+      "updatedAt": "2026-10-07T12:32:17.159Z"
+    },
+    "auth_14": {
+      "id": "auth_14",
+      "departmentName": "Accra Metropolitan Assembly",
+      "emailAddress": "info@ama.gov.gh",
+      "category": "Local Assembly - Accra Metro",
+      "reportTypes": "Accra sanitation, waste, local infrastructure",
+      "updatedAt": "2026-10-07T12:32:17.161Z"
+    },
+    "auth_15": {
+      "id": "auth_15",
+      "departmentName": "Ga Central Municipal Assembly",
+      "emailAddress": "info@gcma.gov.gh",
+      "category": "Local Assembly - Ga Central",
+      "reportTypes": "Local sanitation/infrastructure",
+      "updatedAt": "2026-10-07T12:32:17.164Z"
+    },
+    "auth_16": {
+      "id": "auth_16",
+      "departmentName": "Ga East Municipal Assembly",
+      "emailAddress": "info@gema.gov.gh",
+      "category": "Local Assembly - Ga East",
+      "reportTypes": "Local sanitation/infrastructure",
+      "updatedAt": "2026-10-07T12:32:17.166Z"
+    },
+    "auth_17": {
+      "id": "auth_17",
+      "departmentName": "Ga North Municipal Assembly",
+      "emailAddress": "info@gnma.gov.gh",
+      "category": "Local Assembly - Ga North",
+      "reportTypes": "Local sanitation/infrastructure",
+      "updatedAt": "2026-10-07T12:32:17.168Z"
+    },
+    "auth_18": {
+      "id": "auth_18",
+      "departmentName": "Ga South Municipal Assembly",
+      "emailAddress": "info@gsma.gov.gh",
+      "category": "Local Assembly - Ga South",
+      "reportTypes": "Local sanitation/infrastructure",
+      "updatedAt": "2026-10-07T12:32:17.171Z"
+    },
+    "auth_19": {
+      "id": "auth_19",
+      "departmentName": "Okaikwei North Municipal Assembly",
+      "emailAddress": "info@onma.gov.gh",
+      "category": "Local Assembly - Okaikwei North",
+      "reportTypes": "Local sanitation/infrastructure",
+      "updatedAt": "2026-10-07T12:32:17.173Z"
+    },
+    "auth_20": {
+      "id": "auth_20",
+      "departmentName": "Ghana Revenue Authority",
+      "emailAddress": "info@gra.gov.gh",
+      "category": "Revenue & Customs",
+      "reportTypes": "Tax/customs complaints",
+      "updatedAt": "2026-10-07T12:32:17.175Z"
+    },
+    "auth_21": {
+      "id": "auth_21",
+      "departmentName": "National Insurance Commission",
+      "emailAddress": "info@nicgh.org",
+      "category": "Insurance Regulation",
+      "reportTypes": "Insurance complaints",
+      "updatedAt": "2026-10-07T12:32:17.178Z"
+    },
+    "auth_22": {
+      "id": "auth_22",
+      "departmentName": "National Labour Commission",
+      "emailAddress": "info@nlcghana.org",
+      "category": "Labour & Workplace",
+      "reportTypes": "Employment/labour disputes",
+      "updatedAt": "2026-10-07T12:32:17.180Z"
+    },
+    "auth_23": {
+      "id": "auth_23",
+      "departmentName": "Pharmacy Council Ghana",
+      "emailAddress": "info@pcghana.org",
+      "category": "Pharmacy Regulation",
+      "reportTypes": "Pharmacy/professional complaints",
+      "updatedAt": "2026-10-07T12:32:17.182Z"
+    },
+    "auth_24": {
+      "id": "auth_24",
+      "departmentName": "Medical and Dental Council",
+      "emailAddress": "info@mdc.gov.gh",
+      "category": "Medical Standards",
+      "reportTypes": "Medical/dental professional complaints",
+      "updatedAt": "2026-10-07T12:32:17.184Z"
+    },
+    "auth_25": {
+      "id": "auth_25",
+      "departmentName": "National Identification Authority",
+      "emailAddress": "info@nia.gov.gh",
+      "category": "Civic Identity",
+      "reportTypes": "Ghana Card/identity issues",
+      "updatedAt": "2026-10-07T12:32:17.187Z"
+    },
+    "auth_26": {
+      "id": "auth_26",
+      "departmentName": "National Information Technology Agency",
+      "emailAddress": "info@nita.gov.gh",
+      "category": "Government IT & Digital Public Infrastructure",
+      "reportTypes": "Government IT/digital-service issues",
+      "updatedAt": "2026-10-07T12:32:17.190Z"
+    },
+    "auth_27": {
+      "id": "auth_27",
+      "departmentName": "Public Procurement Authority",
+      "emailAddress": "info@ppa.gov.gh",
+      "category": "Public Procurement",
+      "reportTypes": "Public procurement complaints",
+      "updatedAt": "2026-10-07T12:32:17.192Z"
+    },
+    "auth_28": {
+      "id": "auth_28",
+      "departmentName": "National Petroleum Authority",
+      "emailAddress": "info@npa.gov.gh",
+      "category": "Petroleum & Fuel Standards",
+      "reportTypes": "Fuel/petroleum complaints",
+      "updatedAt": "2026-10-07T12:32:17.194Z"
+    },
+    "auth_29": {
+      "id": "auth_29",
+      "departmentName": "Energy Commission",
+      "emailAddress": "info@energycom.gov.gh",
+      "category": "Energy Standards & Regulations",
+      "reportTypes": "Energy-sector complaints",
+      "updatedAt": "2026-10-07T12:32:17.201Z"
+    },
+    "auth_30": {
+      "id": "auth_30",
+      "departmentName": "Forestry Commission",
+      "emailAddress": "info.hq@fcghana.org",
+      "category": "Forestry & Wildlife Protection",
+      "reportTypes": "Illegal logging/forest issues",
+      "updatedAt": "2026-10-07T12:32:17.203Z"
+    },
+    "auth_31": {
+      "id": "auth_31",
+      "departmentName": "Ghana Maritime Authority",
+      "emailAddress": "info@ghanamaritime.org",
+      "category": "Maritime & Water Transport",
+      "reportTypes": "Maritime/sea-related issues",
+      "updatedAt": "2026-10-07T12:32:17.205Z"
+    },
+    "auth_32": {
+      "id": "auth_32",
+      "departmentName": "Ghana Ports and Harbours Authority",
+      "emailAddress": "headquarters@ghanaports.gov.gh",
+      "category": "Ports & Harbours",
+      "reportTypes": "Port-related complaints",
+      "updatedAt": "2026-10-07T12:32:17.208Z"
+    },
+    "auth_33": {
+      "id": "auth_33",
+      "departmentName": "Ghana Post",
+      "emailAddress": "info@ghanapost.com.gh",
+      "category": "Postal & Digital Address",
+      "reportTypes": "Postal-service complaints",
+      "updatedAt": "2026-10-07T12:32:17.211Z"
+    },
+    "auth_34": {
+      "id": "auth_34",
+      "departmentName": "National Media Commission",
+      "emailAddress": "admin@nmc.org.gh",
+      "category": "Media & Broadcasting Ethics",
+      "reportTypes": "Media complaints",
+      "updatedAt": "2026-10-07T12:32:17.213Z"
+    },
+    "auth_35": {
+      "id": "auth_35",
+      "departmentName": "National Pensions Regulatory Authority",
+      "emailAddress": "info@npra.gov.gh",
+      "category": "Pensions Regulation",
+      "reportTypes": "Pension complaints",
+      "updatedAt": "2026-10-07T12:32:17.215Z"
+    },
+    "auth_36": {
+      "id": "auth_36",
+      "departmentName": "Electoral Commission",
+      "emailAddress": "info@ec.gov.gh",
+      "category": "Elections & Civic Registry",
+      "reportTypes": "Electoral complaints",
+      "updatedAt": "2026-10-07T12:32:17.218Z"
+    },
+    "auth_37": {
+      "id": "auth_37",
+      "departmentName": "Public Services Commission",
+      "emailAddress": "info@psc.gov.gh",
+      "category": "Civil & Public Service Standards",
+      "reportTypes": "Public-service complaints",
+      "updatedAt": "2026-10-07T12:32:17.220Z"
+    },
+    "auth_38": {
+      "id": "auth_38",
+      "departmentName": "Commission on Human Rights and Administrative Justice",
+      "emailAddress": "info@chraj.gov.gh",
+      "category": "Human Rights & Anti-Corruption",
+      "reportTypes": "Human-rights/administrative complaints",
+      "updatedAt": "2026-10-07T12:32:17.223Z"
+    },
+    "auth_39": {
+      "id": "auth_39",
+      "departmentName": "National Disaster Management Organisation",
+      "emailAddress": "info@nadmo.gov.gh",
+      "category": "Disaster & Crisis Management",
+      "reportTypes": "Floods, disasters, emergencies",
+      "updatedAt": "2026-10-07T12:32:17.225Z"
+    },
+    "auth_40": {
+      "id": "auth_40",
+      "departmentName": "Registrar-General's Department",
+      "emailAddress": "info@rgd.gov.gh",
+      "category": "Business & Company Registration",
+      "reportTypes": "Business/company registration issues",
+      "updatedAt": "2026-10-07T12:32:17.228Z"
     }
   },
   "reports": {
@@ -153,6 +473,138 @@
       "userId": "doc_1791179603666_7z1og",
       "createdAt": "2026-10-06T04:14:04.510Z",
       "id": "doc_1791260044512_nu19p"
+    },
+    "doc_1791377168611_usyah": {
+      "title": "Armed robbery incident near Circle Overpass",
+      "description": "Two armed robbers on a motorbike snatched bags and threatened pedestrians at gunpoint late last night.",
+      "locationText": "Kwame Nkrumah Circle, Accra",
+      "category": "Local Assembly - Accra Metro",
+      "aiPriorityScore": "EMERGENCY",
+      "assignedAuthorityId": "14",
+      "assignedAuthorityName": "Accra Metropolitan Assembly",
+      "assignedAuthorityEmail": "info@ama.gov.gh",
+      "filterStatus": "APPROVED",
+      "userId": "test_citizen_001",
+      "createdAt": "2026-10-07T12:46:08.607Z",
+      "id": "doc_1791377168611_usyah"
+    },
+    "doc_1791377168618_v6rd5": {
+      "title": "Fallen electric transformer with sparking wires in Madina",
+      "description": "The high-voltage ECG transformer pole collapsed after heavy rain, leaving exposed live wires on the ground and total blackout.",
+      "locationText": "Madina Old Road, Accra",
+      "category": "Electricity Infrastructure",
+      "aiPriorityScore": "EMERGENCY",
+      "assignedAuthorityId": "6",
+      "assignedAuthorityName": "Electricity Company of Ghana",
+      "assignedAuthorityEmail": "ecgho@ecggh.com",
+      "filterStatus": "APPROVED",
+      "userId": "test_citizen_001",
+      "createdAt": "2026-10-07T12:46:08.616Z",
+      "id": "doc_1791377168618_v6rd5"
+    },
+    "doc_1791377168627_w0s8f": {
+      "title": "Major water pipe burst flooding street in Adenta",
+      "description": "A large GWCL main pipe has burst open, wasting gallons of clean drinking water and cutting off tap supply to the entire community.",
+      "locationText": "Adenta Barrier, Accra",
+      "category": "Local Assembly - Accra Metro",
+      "aiPriorityScore": "LOW",
+      "assignedAuthorityId": "14",
+      "assignedAuthorityName": "Accra Metropolitan Assembly",
+      "assignedAuthorityEmail": "info@ama.gov.gh",
+      "filterStatus": "APPROVED",
+      "userId": "test_citizen_001",
+      "createdAt": "2026-10-07T12:46:08.625Z",
+      "id": "doc_1791377168627_w0s8f"
+    },
+    "doc_1791377168633_dkko8": {
+      "title": "Pharmacy selling expired antibiotics without prescription",
+      "description": "A local drug store is selling expired amoxicillin with falsified expiry labels and counterfeit cosmetics causing skin burns.",
+      "locationText": "Kasoa New Market",
+      "category": "Pharmacy Regulation",
+      "aiPriorityScore": "LOW",
+      "assignedAuthorityId": "23",
+      "assignedAuthorityName": "Pharmacy Council Ghana",
+      "assignedAuthorityEmail": "info@pcghana.org",
+      "filterStatus": "APPROVED",
+      "userId": "test_citizen_001",
+      "createdAt": "2026-10-07T12:46:08.631Z",
+      "id": "doc_1791377168633_dkko8"
+    },
+    "doc_1791377168643_mmogo": {
+      "title": "Illegal galamsey chemicals polluting Pra river",
+      "description": "Illegal gold miners are discharging toxic mercury and cyanide directly into the river causing heavy chemical pollution.",
+      "locationText": "Pra River basin",
+      "category": "Environment & Pollution",
+      "aiPriorityScore": "LOW",
+      "assignedAuthorityId": "4",
+      "assignedAuthorityName": "Environmental Protection Authority",
+      "assignedAuthorityEmail": "info@epa.gov.gh",
+      "filterStatus": "APPROVED",
+      "userId": "test_citizen_001",
+      "createdAt": "2026-10-07T12:46:08.641Z",
+      "id": "doc_1791377168643_mmogo"
+    },
+    "doc_1791377168652_pjqi3": {
+      "title": "Massive uncollected garbage dump in Makola market",
+      "description": "Heaps of rotting refuse and choked gutters have blocked access to shops in Central Accra for three weeks, creating terrible stench.",
+      "locationText": "Makola Market, Central Accra",
+      "category": "Local Assembly - Accra Metro",
+      "aiPriorityScore": "MEDIUM",
+      "assignedAuthorityId": "14",
+      "assignedAuthorityName": "Accra Metropolitan Assembly",
+      "assignedAuthorityEmail": "info@ama.gov.gh",
+      "filterStatus": "APPROVED",
+      "userId": "test_citizen_001",
+      "createdAt": "2026-10-07T12:46:08.650Z",
+      "id": "doc_1791377168652_pjqi3"
+    },
+    "doc_1791377168660_ecm21": {
+      "title": "Catastrophic flash flood submerging houses in Weija",
+      "description": "The Weija dam spillage and heavy rainstorm have submerged dozens of homes, requiring emergency disaster relief boats.",
+      "locationText": "Weija, Ga South",
+      "category": "Local Assembly - Ga South",
+      "aiPriorityScore": "EMERGENCY",
+      "assignedAuthorityId": "18",
+      "assignedAuthorityName": "Ga South Municipal Assembly",
+      "assignedAuthorityEmail": "info@gsma.gov.gh",
+      "filterStatus": "APPROVED",
+      "userId": "test_citizen_001",
+      "createdAt": "2026-10-07T12:46:08.658Z",
+      "id": "doc_1791377168660_ecm21"
+    },
+    "doc_1791377168668_lysq6": {
+      "title": "Deep crater pothole causing vehicle axle damage",
+      "description": "Deep road potholes on the main inner city street are breaking car suspensions and causing severe traffic gridlock.",
+      "locationText": "Ring Road Central",
+      "category": "Urban Roads & Streets",
+      "aiPriorityScore": "MEDIUM",
+      "assignedAuthorityId": "12",
+      "assignedAuthorityName": "Department of Urban Roads",
+      "assignedAuthorityEmail": "info@dur.gov.gh",
+      "filterStatus": "APPROVED",
+      "userId": "test_citizen_001",
+      "createdAt": "2026-10-07T12:46:08.666Z",
+      "id": "doc_1791377168668_lysq6"
+    }
+  },
+  "monthly_digest_logs": {
+    "doc_1791376721815_4b36e": {
+      "targetMonth": null,
+      "runTimestamp": "2026-10-07T12:38:41.812Z",
+      "dryRun": true,
+      "totalAuthorities": 40,
+      "sentCount": 40,
+      "errorsCount": 0,
+      "id": "doc_1791376721815_4b36e"
+    },
+    "doc_1791377168948_4z510": {
+      "targetMonth": "October 2026",
+      "runTimestamp": "2026-10-07T12:46:08.946Z",
+      "dryRun": true,
+      "totalAuthorities": 40,
+      "sentCount": 40,
+      "errorsCount": 0,
+      "id": "doc_1791377168948_4z510"
     }
   }
 }

@@ -9,17 +9,18 @@ import { Platform } from 'react-native';
  * - Custom EXPO_PUBLIC_API_URL overrides
  */
 export function getBaseUrl(): string {
-  // 1. Explicit override via .env
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
-
-  // 2. Web browser: localhost:3000 connects directly to backend
+  // 1. Web browser: localhost connects directly to the backend
   if (Platform.OS === 'web') {
+    if (process.env.EXPO_PUBLIC_API_URL && process.env.EXPO_PUBLIC_API_URL.startsWith('https://')) {
+      return process.env.EXPO_PUBLIC_API_URL;
+    }
+    if (typeof window !== 'undefined' && window.location?.hostname) {
+      return `http://${window.location.hostname}:3000`;
+    }
     return 'http://localhost:3000';
   }
 
-  // 3. Physical phone with Expo Go: extract host machine IP from Metro debugger connection
+  // 2. Physical mobile phone with Expo Go: dynamically extract PC's current IP from Metro connection
   const hostUri = Constants.expoConfig?.hostUri ?? (Constants as any).linkingUri;
   if (typeof hostUri === 'string') {
     const cleaned = hostUri.replace(/^[a-z]+:\/\//i, '');
@@ -27,6 +28,11 @@ export function getBaseUrl(): string {
     if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
       return `http://${ip}:3000`;
     }
+  }
+
+  // 3. Explicit override via .env if configured
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
   }
 
   // 4. Android Emulator loopback alias to host machine
