@@ -585,6 +585,27 @@
       "userId": "test_citizen_001",
       "createdAt": "2026-10-07T12:46:08.666Z",
       "id": "doc_1791377168668_lysq6"
+    },
+    "doc_1791385886388_p8bmm": {
+      "title": "Deep potholes",
+      "description": "There are deep pot holes on the Amasaman main road with needs immediate attention",
+      "category": "Urban Roads & Streets",
+      "locationText": "Amasaman",
+      "latitude": null,
+      "longitude": null,
+      "imageUrl": null,
+      "aiPriorityScore": "LOW",
+      "confidence": 0.85,
+      "status": "PENDING",
+      "filterStatus": "APPROVED",
+      "filterReason": null,
+      "assignedAuthorityId": "12",
+      "assignedAuthorityName": "Department of Urban Roads",
+      "assignedAuthorityEmail": "info@dur.gov.gh",
+      "monthlyDigestSentAt": null,
+      "userId": "doc_1791179603666_7z1og",
+      "createdAt": "2026-10-07T15:11:26.387Z",
+      "id": "doc_1791385886388_p8bmm"
     }
   },
   "monthly_digest_logs": {

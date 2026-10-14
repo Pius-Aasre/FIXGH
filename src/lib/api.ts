@@ -60,22 +60,73 @@ type RequestOptions = {
   isFormData?: boolean;
 };
 
+function uploadWithXHR<T>(
+  url: string,
+  formData: FormData,
+  token: string | null,
+  method: string = 'POST'
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, url);
+    xhr.timeout = 60000;
+
+    if (token) {
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    }
+
+    xhr.onload = () => {
+      let data: any;
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch {
+        data = { error: xhr.responseText || `Server returned status ${xhr.status}` };
+      }
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(data);
+      } else {
+        reject(new Error(data.message || data.error || `Request failed (${xhr.status})`));
+      }
+    };
+
+    xhr.onerror = (e: any) => {
+      console.error(`[Upload Network Error] Failed to reach ${url}:`, e);
+      reject(
+        new Error(`Cannot connect to FixGH backend server at ${url}. Please ensure your backend is running.`)
+      );
+    };
+
+    xhr.ontimeout = () => {
+      reject(new Error('Upload timed out. Please check your network connection.'));
+    };
+
+    xhr.send(formData);
+  });
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, isFormData = false } = options;
+  const baseUrl = getBaseUrl();
+  const url = `${baseUrl}${path}`;
+
+  // Use XMLHttpRequest for FormData uploads — Expo's fetch throws "Unsupported FormDataPart implementation"
+  // on React Native file objects with { uri, name, type }, whereas XMLHttpRequest handles them natively.
+  if (isFormData && body) {
+    return uploadWithXHR<T>(url, body as FormData, authToken, method);
+  }
+
   const headers: Record<string, string> = {};
 
   if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
-  if (body && !isFormData) headers['Content-Type'] = 'application/json';
-
-  const baseUrl = getBaseUrl();
-  const url = `${baseUrl}${path}`;
+  if (body) headers['Content-Type'] = 'application/json';
 
   let res: Response;
   try {
     res = await fetch(url, {
       method,
       headers,
-      body: isFormData ? (body as FormData) : body ? JSON.stringify(body) : undefined,
+      body: body ? JSON.stringify(body) : undefined,
     });
   } catch (netErr: any) {
     // Retry once after a brief pause to handle transient socket resets / nodemon restarts
@@ -84,7 +135,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       res = await fetch(url, {
         method,
         headers,
-        body: isFormData ? (body as FormData) : body ? JSON.stringify(body) : undefined,
+        body: body ? JSON.stringify(body) : undefined,
       });
     } catch {
       console.error(`[API Network Error] Failed to reach ${url}:`, netErr.message);

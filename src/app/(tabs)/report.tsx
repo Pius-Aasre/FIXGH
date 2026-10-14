@@ -115,10 +115,13 @@ export default function ReportScreen() {
         formData.append('longitude', String(gpsCoords.longitude));
       }
       if (image && !image.canceled && image.assets?.[0]) {
+        const asset = image.assets[0];
+        const uri = asset.uri;
+        const ext = uri.split('.').pop() || 'jpg';
         formData.append('image', {
-          uri: image.assets[0].uri,
-          type: 'image/jpeg',
-          name: 'report.jpg',
+          uri,
+          type: asset.mimeType || `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+          name: asset.fileName || `report-${Date.now()}.${ext}`,
         } as any);
       }
 
