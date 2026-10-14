@@ -1,21 +1,10 @@
----
-title: FixGH AI Service
-emoji: 🇬🇭
-colorFrom: green
-colorTo: emerald
-sdk: gradio
-sdk_version: "4.44.0"
-app_file: app.py
-pinned: false
-license: mit
-short_description: AI complaint classification & priority scoring for FixGH
----
-
 # FixGH AI Service
 
-**FastAPI-powered AI microservice** for the [FixGH](https://github.com/your-org/fixGH) civic-tech platform.
+**FastAPI-powered AI microservice** for the FixGH civic-tech platform.  
+Deployed on **Render** as a Docker service.
 
-Automatically classifies citizen complaints, filters spam, assigns priority scores, and routes reports to the correct Ghanaian public authority out of 40 registered departments.
+Automatically classifies citizen complaints, filters spam, assigns priority scores,
+and routes reports to the correct Ghanaian public authority out of 40 registered departments.
 
 ## Endpoints
 
@@ -34,12 +23,9 @@ pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-Interactive API docs available at: `http://localhost:8000/docs`
+Swagger docs: `http://localhost:8000/docs`
 
-## Deployment (Hugging Face Spaces)
+## Deployment
 
-This Space runs the FastAPI app via `app.py` (which imports from `main.py`).  
-The Space is configured to use the **Gradio SDK wrapper** to expose a public HTTPS URL.
-
-> [!NOTE]
-> The FixGH backend (on Render) calls this Space URL via the `AI_SERVICE_URL` environment variable.
+Deployed automatically via [`render.yaml`](../render.yaml) as the `fixgh-ai` Docker service.  
+The backend (`fixgh-backend`) receives the URL automatically via Render's `fromService` wiring.
