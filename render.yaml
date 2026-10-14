@@ -1,0 +1,68 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Render Blueprint — FixGH Backend API
+# Docs: https://render.com/docs/blueprint-spec
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  - type: web
+    name: fixgh-backend
+    runtime: node
+    region: oregon
+    plan: free                          # Change to "starter" or higher for production
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate
+    startCommand: npm start
+    healthCheckPath: /api/health
+
+    # ── Environment Variables ──────────────────────────────────────────────
+    # Set these in the Render dashboard under "Environment" for this service.
+    # Never commit real secrets to source control.
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Supabase PostgreSQL connection string (Session Mode, port 5432)
+      # Find this in: Supabase → Project → Settings → Database → Connection string → URI
+      - key: DATABASE_URL
+        sync: false                     # Must be set manually in Render dashboard
+
+      # Supabase "Direct Connection" URL for Prisma migrations only
+      # Find this in: Supabase → Project → Settings → Database → Direct connection
+      - key: DIRECT_URL
+        sync: false
+
+      # JWT signing secret — generate with: openssl rand -hex 64
+      - key: JWT_SECRET
+        sync: false
+
+      # Cloudinary credentials for report image uploads
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+      # Email (Resend or Nodemailer SMTP)
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: noreply@fixgh.org
+
+      # HuggingFace AI Service base URL
+      # e.g. https://your-username-fixgh-ai.hf.space
+      - key: AI_SERVICE_URL
+        sync: false
+
+      # Firebase / Firestore (optional — only if using cloud Firestore)
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+
+      # Allowed origins for CORS (comma-separated list of frontend URLs)
+      # e.g. https://fixgh-dashboard.vercel.app,https://fixgh.org
+      - key: CORS_ORIGIN
+        sync: false
