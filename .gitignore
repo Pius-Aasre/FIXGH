@@ -30,13 +30,17 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files — real secrets (never commit these)
 .env
 .env.*
 .env*.local
 *.env
 serviceAccountKey*.json
 *firebase*.json
+
+# but DO track example/template files (no real secrets)
+!.env.example
+!**/.env.example
 
 # typescript
 *.tsbuildinfo
