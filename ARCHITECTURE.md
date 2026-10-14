@@ -19,13 +19,13 @@ We recommend a **Monorepo** approach (e.g., using Turborepo or Yarn Workspaces) 
 ```text
 fixgh-platform/
 │
-├── apps/
+├── frontend/
 │   ├── mobile/         # Expo / React Native App (Citizen Facing)
-│   ├── backend/        # Node.js / Express API
-│   ├── web-dashboard/  # React / Next.js Web Portal (Authority Facing)
-│   └── ai-service/     # Python / FastAPI Service
+│   └── web/            # React / Vite Web Dashboard (Authority Facing)
 │
-└── packages/           # Shared types, linting configs, etc. (optional)
+├── backend/            # Node.js / Express API
+├── ai-service/         # Python / FastAPI Service
+└── fixgh/              # Python utility service
 ```
 
 ---

@@ -18,7 +18,7 @@
       ]
     },
     "web-app": {
-      "root": "web-app",
+      "root": "frontend/web",
       "framework": "vite"
     }
   },
