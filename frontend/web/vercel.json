@@ -23,7 +23,7 @@
       ]
     }
   ],
-  "": {
+  "env": {
     "VITE_API_URL": "@fixgh_api_url"
   }
 }
