@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 // Icons using basic SVGs for standalone support without external icon libraries
 const HomeIcon = () => (
