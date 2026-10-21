@@ -26,15 +26,39 @@ model Report {
   title           String
   description     String
   imageUrl        String?
+  /// Set when the citizen attached a photo but storage rejected it.
+  /// The report is still saved — only the image is missing.
+  imageUploadFailed Boolean @default(false)
   category        String?
   aiPriorityScore String?  // e.g., "HIGH", "MEDIUM", "LOW"
   status          String   @default("PENDING") // PENDING, VERIFIED, IN_PROGRESS, COMPLETED
   latitude        Float?
   longitude       Float?
+  /// Human-readable location supplied by the citizen (e.g. "Ofankor Barrier, Accra")
+  locationText    String?
+  /// Classifier confidence, 0.0 - 1.0
+  confidence      Float?
+  /// APPROVED | SPAM | REJECTED
+  filterStatus    String   @default("APPROVED")
+  filterReason    String?
+  /// Denormalised authority routing (the authority registry is a static seed)
+  assignedAuthorityId    String?
+  assignedAuthorityName  String?
+  assignedAuthorityEmail String?
+  /// Whether the authority was successfully notified about this report
+  /// (instant email alert for EMERGENCY-level reports).
+  authorityNotified      Boolean   @default(false)
+  authorityNotifiedAt    DateTime?
+  monthlyDigestSentAt    DateTime?
   createdAt       DateTime @default(now())
 
   userId          String
   user            User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([filterStatus])
+  @@index([assignedAuthorityEmail])
+  @@index([createdAt])
 }
 
 model NewsPost {
@@ -49,4 +73,20 @@ model Authority {
   id             String   @id @default(uuid())
   departmentName String
   emailAddress   String   @unique
+  category       String?
+  reportTypes    String?
+  updatedAt      DateTime @updatedAt
+}
+
+/// Audit trail for monthly digest dispatch runs.
+model MonthlyDigestLog {
+  id               String   @id @default(uuid())
+  targetMonth      String
+  runTimestamp     DateTime @default(now())
+  dryRun           Boolean  @default(false)
+  totalAuthorities Int
+  sentCount        Int      @default(0)
+  errorsCount      Int      @default(0)
+
+  @@index([targetMonth])
 }

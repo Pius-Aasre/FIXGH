@@ -13,7 +13,8 @@ const AUTHORITIES = [
     category: 'Security & Law Enforcement',
     reportTypes: 'Crime, theft, assault, threats, security',
     keywords: [
-      'crime', 'theft', 'stolen', 'robbery', 'armed robber', 'thief', 'burglary',
+      'crime', 'theft', 'stolen', 'robbery', 'armed robber', 'armed robbery',
+      'gunpoint', 'thief', 'burglary',
       'assault', 'attacked', 'violence', 'threat', 'threatening', 'security',
       'murder', 'extortion', 'scam', 'weapon', 'gun', 'knife', 'police',
       'fraud', 'harassment', 'kidnap', 'break-in', 'vandalism',
@@ -88,11 +89,13 @@ const AUTHORITIES = [
     email: 'info@gwcl.com.gh',
     category: 'Water Infrastructure',
     reportTypes: 'Water supply, damaged water infrastructure',
-    keywords: [
+      keywords: [
       'water supply', 'gwcl', 'burst pipe', 'broken pipe', 'leaking pipe',
       'water outage', 'no water', 'dirty water', 'tap water', 'low water pressure',
       'broken water main', 'water crisis', 'flooding pipe', 'water tanker shortage',
-    ],
+      'water pipe', 'pipe burst', 'burst water pipe', 'water main', 'main pipe',
+      'pipe leak', 'water leak',
+      ],
   },
   {
     id: '8',

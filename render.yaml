@@ -24,7 +24,7 @@ services:
     plan: free
     rootDir: backend
     buildCommand: npm install && npx prisma generate
-    startCommand: npm start
+    startCommand: npx prisma migrate deploy && npm start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
@@ -53,8 +53,17 @@ services:
       # Email — resend.com → API Keys
       - key: RESEND_API_KEY
         sync: false
+      # Resend's free test sender. Only permitted to deliver to the account
+      # owner's own inbox — verify a domain before sending to real recipients.
       - key: EMAIL_FROM
-        value: noreply@fixgh.org
+        value: FixGH Alerts <onboarding@resend.dev>
+      # TEST MODE — redirect every outbound email to a single inbox.
+      # Set to an empty value once a sending domain is verified.
+      - key: EMAIL_TEST_RECIPIENT
+        sync: false
+      # Authority dashboard base URL used in the emailed report link
+      - key: DASHBOARD_URL
+        value: https://fixgh-dashboard.vercel.app
 
       # AI Service — auto-wired from fixgh-ai (no copy-paste needed)
       - key: AI_SERVICE_URL
@@ -62,14 +71,6 @@ services:
           name: fixgh-ai
           type: web
           property: host
-
-      # Firebase (optional — leave blank to use local JSON fallback)
-      - key: FIREBASE_PROJECT_ID
-        sync: false
-      - key: FIREBASE_CLIENT_EMAIL
-        sync: false
-      - key: FIREBASE_PRIVATE_KEY
-        sync: false
 
       # CORS — set to your Vercel URL e.g. https://fixgh-dashboard.vercel.app
       - key: CORS_ORIGIN

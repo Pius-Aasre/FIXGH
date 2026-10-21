@@ -2,6 +2,7 @@
 
 const axios = require('axios');
 const { AUTHORITIES, AUTHORITIES_BY_ID } = require('../constants/authorities');
+const { normalise, phraseMatches, determinePriority } = require('./classification-rules');
 
 const AI_URL = process.env.AI_SERVICE_URL;
 if (!AI_URL) {
@@ -27,46 +28,68 @@ function localFilterSpam(title, description) {
 }
 
 /**
- * Local rule-based classification among all 40 Ghanaian authorities
+ * Local rule-based classification among all 40 Ghanaian authorities.
+ *
+ * Keyword evidence is primary; location evidence only breaks ties. Matching a
+ * generic city name (e.g. "Accra") must not outrank an explicit domain
+ * keyword, otherwise every report filed in Accra is routed to the Accra
+ * Metropolitan Assembly instead of the responsible agency.
  */
 function localClassifyAuthority(title, description, locationText = '') {
-  const clean = `${title || ''} ${description || ''} ${locationText || ''}`.toLowerCase().replace(/[^\w\s]/g, ' ');
+  const clean = normalise(`${title || ''} ${description || ''} ${locationText || ''}`);
 
-  let bestAuth = null;
-  let highestScore = 0;
+  const keywordScores = {};
+  const locationScores = {};
 
   for (const auth of AUTHORITIES) {
-    let score = 0;
+    let keywordScore = 0;
+    let locationScore = 0;
 
     // Check authority name match
-    if (clean.includes(auth.name.toLowerCase())) {
-      score += 15;
+    if (phraseMatches(clean, auth.name)) {
+      keywordScore += 15;
     }
 
     // Check local municipal boundaries (e.g. Accra, Sowutuom, Lapaz)
     if (auth.locations) {
       for (const loc of auth.locations) {
-        if (clean.includes(loc.toLowerCase())) {
-          score += 8;
+        if (phraseMatches(clean, loc)) {
+          locationScore += 8;
         }
       }
     }
 
     // Check keywords
     for (const kw of auth.keywords) {
-      if (clean.includes(kw.toLowerCase())) {
-        score += kw.includes(' ') ? 4 : 2;
+      if (phraseMatches(clean, kw)) {
+        keywordScore += kw.includes(' ') ? 4 : 2;
       }
     }
 
-    if (score > highestScore) {
-      highestScore = score;
-      bestAuth = auth;
-    }
+    if (keywordScore > 0) keywordScores[auth.id] = keywordScore;
+    if (locationScore > 0) locationScores[auth.id] = locationScore;
+  }
+
+  let bestAuth = null;
+
+  if (Object.keys(keywordScores).length > 0) {
+    const topScore = Math.max(...Object.values(keywordScores));
+    const tied = Object.keys(keywordScores).filter((id) => keywordScores[id] === topScore);
+
+    // Location only decides between equally-scored authorities
+    const bestId = tied.reduce((best, id) =>
+      (locationScores[id] || 0) > (locationScores[best] || 0) ? id : best
+    );
+
+    bestAuth = AUTHORITIES.find((a) => a.id === bestId) || null;
+  } else if (Object.keys(locationScores).length > 0) {
+    const topScore = Math.max(...Object.values(locationScores));
+    const bestId = Object.keys(locationScores).find((id) => locationScores[id] === topScore);
+    bestAuth = AUTHORITIES.find((a) => a.id === bestId) || null;
   }
 
   // Fallbacks if no specific keywords matched
-  if (!bestAuth || highestScore === 0) {
+  if (!bestAuth) {
     if (/(road|street|pothole|gutter|drain|traffic)/i.test(clean)) {
       bestAuth = AUTHORITIES.find((a) => a.id === '12') || AUTHORITIES[0]; // Dept of Urban Roads
     } else {
@@ -78,20 +101,10 @@ function localClassifyAuthority(title, description, locationText = '') {
 }
 
 /**
- * Priority determination
+ * Priority determination (title + description).
  */
-function localDeterminePriority(category, description) {
-  const desc = (description || '').toLowerCase();
-  if (/(emergency|collapse|explosion|casualty|unconscious|dying|armed robber|fatal|live wire|active fire)/i.test(desc)) {
-    return 'EMERGENCY';
-  }
-  if (/(hazard|flooding|blackout|transformer|burst main|contamination|expired medicine|open manhole|urgent)/i.test(desc)) {
-    return 'HIGH';
-  }
-  if (/(unpaid|delay|pothole|choked|leak|faded|bad network)/i.test(desc)) {
-    return 'MEDIUM';
-  }
-  return 'LOW';
+function localDeterminePriority(category, title, description) {
+  return determinePriority(category, title, description);
 }
 
 /**
@@ -117,8 +130,12 @@ async function classifyAndRoute(title, description, locationText = '') {
           confidence: res.data.confidence || 0.8,
         };
       }
-    } catch {
-      // Graceful fallback to local AI engine
+    } catch (err) {
+      // Graceful fallback to local AI engine — but say so, otherwise a
+      // permanently broken AI service is invisible to operators.
+      console.warn(
+        `[AI SERVICE] ${AI_URL} unreachable (${err.message || err.code || 'unknown error'}) — using local fallback classifier.`
+      );
     }
   }
 
@@ -136,7 +153,7 @@ async function classifyAndRoute(title, description, locationText = '') {
   }
 
   const matchedAuth = localClassifyAuthority(title, description, locationText);
-  const priority = localDeterminePriority(matchedAuth.category, description);
+  const priority = localDeterminePriority(matchedAuth.category, title, description);
 
   return {
     isValid: true,
@@ -159,8 +176,8 @@ async function categorizeReport(title, description) {
 /**
  * Legacy wrapper for priority scoring
  */
-async function scorePriority(category, description) {
-  return localDeterminePriority(category, description);
+async function scorePriority(category, title, description) {
+  return localDeterminePriority(category, title, description);
 }
 
 /**
@@ -193,8 +210,11 @@ async function generateMonthlyDigestSummary(authority, monthLabel, complaints = 
           urgencyBreakdown: res.data.urgency_breakdown || {},
         };
       }
-    } catch {
+    } catch (err) {
       // Fallback to local synthesis
+      console.warn(
+        `[AI SERVICE] Monthly digest summary generation failed (${err.message || 'unknown error'}) — using local synthesis.`
+      );
     }
   }
 
@@ -234,4 +254,9 @@ module.exports = {
   categorizeReport,
   scorePriority,
   generateMonthlyDigestSummary,
+  // Exposed for the classifier parity check (scripts/check-classifier-sync.js).
+  // These are the exact functions used by the offline fallback path.
+  localFilterSpam,
+  localClassifyAuthority,
+  localDeterminePriority,
 };

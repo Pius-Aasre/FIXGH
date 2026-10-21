@@ -6,9 +6,15 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "seed": "node scripts/seed-firestore.js",
+    "seed": "prisma db seed",
+    "db:migrate": "prisma migrate deploy",
     "digest": "node scripts/send-monthly-digest.js",
-    "digest:dry": "node scripts/send-monthly-digest.js --dry-run"
+    "digest:dry": "node scripts/send-monthly-digest.js --dry-run",
+    "ai:sync": "node scripts/sync-classifier-from-js.js",
+    "ai:check": "node scripts/check-classifier-sync.js"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@prisma/client": "^5.16.0",
@@ -19,7 +25,6 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-rate-limit": "^8.7.0",
-    "firebase-admin": "^14.5.0",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.4.0",

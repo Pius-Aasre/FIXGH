@@ -1,13 +1,76 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
+import { api, Report } from '../../lib/api';
+import { useAuth } from '../../lib/auth-store';
 
 const GH_RED   = '#CE1126';
 const GH_GOLD  = '#FCD116';
 const GH_GREEN = '#006B3F';
 const GH_BLACK = '#1A1A1A';
 
+const SAMPLE_ALERTS = [
+  { title: 'Burst Water Pipe', location: 'Spintex Road, Accra', time: 'Reported: 1 hr ago', priority: 'EMERGENCY', color: GH_RED },
+  { title: 'Open Manhole', location: 'Liberation Road, Airport City', time: 'Reported: 2 hrs ago', priority: 'HIGH', color: GH_GOLD },
+  { title: 'Streetlight Out', location: 'Tema Motorway, Accra', time: 'Reported: 4 hrs ago', priority: 'MEDIUM', color: GH_GREEN },
+];
+
+const PRIORITY_COLORS: Record<string, string> = {
+  EMERGENCY: GH_RED,
+  CRITICAL: GH_RED,
+  HIGH: GH_GOLD,
+  URGENT: GH_GOLD,
+  MEDIUM: GH_GREEN,
+};
+
+/** Mirrors the web dashboard (frontend/web/src/lib/format.ts). */
+function summarise(reports: Report[]) {
+  const now = new Date();
+  const thisMonth = reports.filter((r) => {
+    const d = new Date(r.createdAt);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  });
+  return {
+    reported: thisMonth.length,
+    resolved: thisMonth.filter((r) => r.status === 'COMPLETED').length,
+    inProgress: thisMonth.filter((r) => r.status === 'IN_PROGRESS' || r.status === 'VERIFIED').length,
+  };
+}
+
 export default function HomeScreen() {
+  const { isAuthenticated } = useAuth();
+  const [reports, setReports] = useState<Report[]>([]);
+
+  // The tab bar keeps this screen mounted, so refetch whenever it regains
+  // focus — otherwise the counters stay stale after filing a report.
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated) {
+        setReports([]);
+        return;
+      }
+      let cancelled = false;
+      api.reports
+        .mine()
+        .then((data) => {
+          if (!cancelled) setReports(Array.isArray(data) ? data : []);
+        })
+        .catch(() => {
+          if (!cancelled) setReports([]);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, [isAuthenticated])
+  );
+
+  const stats = summarise(reports);
+  const alerts = [...reports]
+    .filter((r) => r.filterStatus !== 'SPAM')
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 3);
+
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
@@ -27,19 +90,25 @@ export default function HomeScreen() {
       <View style={styles.statsContainer}>
         <View style={[styles.statCard, { borderTopColor: GH_GREEN }]}>
           <Ionicons name="alert-circle-outline" size={22} color={GH_GREEN} />
-          <Text style={[styles.statValue, { color: GH_GREEN }]}>148</Text>
+          <Text style={[styles.statValue, { color: GH_GREEN }]}>
+            {isAuthenticated ? stats.reported : 148}
+          </Text>
           <Text style={styles.statTitle}>Issues Reported</Text>
           <Text style={styles.statDesc}>This Month</Text>
         </View>
         <View style={[styles.statCard, { borderTopColor: GH_RED }]}>
           <Ionicons name="checkmark-circle-outline" size={22} color={GH_RED} />
-          <Text style={[styles.statValue, { color: GH_RED }]}>112</Text>
+          <Text style={[styles.statValue, { color: GH_RED }]}>
+            {isAuthenticated ? stats.resolved : 112}
+          </Text>
           <Text style={styles.statTitle}>Issues Resolved</Text>
           <Text style={styles.statDesc}>This Month</Text>
         </View>
         <View style={[styles.statCard, { borderTopColor: GH_GOLD }]}>
           <Ionicons name="time-outline" size={22} color={GH_GOLD} />
-          <Text style={[styles.statValue, { color: GH_GOLD }]}>36</Text>
+          <Text style={[styles.statValue, { color: GH_GOLD }]}>
+            {isAuthenticated ? stats.inProgress : 36}
+          </Text>
           <Text style={styles.statTitle}>In Progress</Text>
           <Text style={styles.statDesc}>Active</Text>
         </View>
@@ -58,32 +127,48 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>⚡ Recent High-Priority Alerts</Text>
 
-        <View style={styles.alertCard}>
-          <View style={[styles.alertPriority, { backgroundColor: GH_RED }]}>
-            <Text style={styles.alertPriorityText}>EMERGENCY</Text>
-          </View>
-          <Text style={styles.alertTitle}>Burst Water Pipe</Text>
-          <Text style={styles.alertLocation}>📍 Spintex Road, Accra</Text>
-          <Text style={styles.alertTime}>Reported: 1 hr ago</Text>
-        </View>
-
-        <View style={styles.alertCard}>
-          <View style={[styles.alertPriority, { backgroundColor: GH_GOLD }]}>
-            <Text style={[styles.alertPriorityText, { color: GH_BLACK }]}>HIGH</Text>
-          </View>
-          <Text style={styles.alertTitle}>Open Manhole</Text>
-          <Text style={styles.alertLocation}>📍 Liberation Road, Airport City</Text>
-          <Text style={styles.alertTime}>Reported: 2 hrs ago</Text>
-        </View>
-
-        <View style={styles.alertCard}>
-          <View style={[styles.alertPriority, { backgroundColor: GH_GREEN }]}>
-            <Text style={styles.alertPriorityText}>MEDIUM</Text>
-          </View>
-          <Text style={styles.alertTitle}>Streetlight Out</Text>
-          <Text style={styles.alertLocation}>📍 Tema Motorway, Accra</Text>
-          <Text style={styles.alertTime}>Reported: 4 hrs ago</Text>
-        </View>
+        {alerts.length > 0 ? (
+          alerts.map((report) => (
+            <View key={report.id} style={styles.alertCard}>
+              <View
+                style={[
+                  styles.alertPriority,
+                  { backgroundColor: PRIORITY_COLORS[report.aiPriorityScore || 'MEDIUM'] ?? GH_GREEN },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.alertPriorityText,
+                    { color: (PRIORITY_COLORS[report.aiPriorityScore || 'MEDIUM'] ?? GH_GREEN) === GH_GOLD ? GH_BLACK : '#fff' },
+                  ]}
+                >
+                  {(report.aiPriorityScore || 'MEDIUM').toUpperCase()}
+                </Text>
+              </View>
+              <Text style={styles.alertTitle}>{report.title}</Text>
+              <Text style={styles.alertLocation}>📍 {report.locationText || 'Location pending'}</Text>
+              <Text style={styles.alertTime}>Reported: {new Date(report.createdAt).toLocaleString()}</Text>
+            </View>
+          ))
+        ) : (
+          SAMPLE_ALERTS.map((alert) => (
+            <View key={alert.title} style={styles.alertCard}>
+              <View style={[styles.alertPriority, { backgroundColor: alert.color }]}>
+                <Text
+                  style={[
+                    styles.alertPriorityText,
+                    { color: alert.color === GH_GOLD ? GH_BLACK : '#fff' },
+                  ]}
+                >
+                  {alert.priority}
+                </Text>
+              </View>
+              <Text style={styles.alertTitle}>{alert.title}</Text>
+              <Text style={styles.alertLocation}>📍 {alert.location}</Text>
+              <Text style={styles.alertTime}>{alert.time}</Text>
+            </View>
+          ))
+        )}
       </View>
     </ScrollView>
   );

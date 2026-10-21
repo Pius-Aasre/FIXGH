@@ -3,12 +3,20 @@
 const { Resend } = require('resend');
 const nodemailer = require('nodemailer');
 
-// Initialize Resend client if API key is provided
+/**
+ * Single source of truth for all outbound email.
+ *
+ * Every message in the system (emergency authority alerts, monthly digests)
+ * flows through `sendEmail()` so that delivery, fall-back and test-mode
+ * behaviour are identical everywhere.
+ */
+
+// --- Providers ---------------------------------------------------------------
+
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-// Fallback SMTP transporter if SMTP settings are used
 const smtpTransporter = process.env.EMAIL_HOST && process.env.EMAIL_USER
   ? nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
@@ -20,6 +28,47 @@ const smtpTransporter = process.env.EMAIL_HOST && process.env.EMAIL_USER
       },
     })
   : null;
+
+/**
+ * Test-mode recipient.
+ *
+ * When set, EVERY outbound email is redirected to this inbox instead of the
+ * live authority address. This is required while sending from Resend's
+ * `onboarding@resend.dev` test sender, which Resend only permits to deliver
+ * to the account owner's own email address.
+ *
+ * The authority the alert was really addressed to is preserved in the subject
+ * prefix and in a banner at the top of the message body.
+ */
+const TEST_RECIPIENT =
+  process.env.EMAIL_TEST_RECIPIENT ||
+  process.env.MONTHLY_DIGEST_TEST_RECIPIENT ||
+  process.env.TEST_AUTHORITY_EMAIL ||
+  null;
+
+/**
+ * Resolve the actual delivery address for a message.
+ *
+ * @param {string} realAddress       The address the message is really for
+ * @param {string} [overrideRecipient] Explicit address that wins over test mode
+ *                                    (used by the digest CLI `--to` flag)
+ */
+function resolveRecipient(realAddress, overrideRecipient = null) {
+  if (overrideRecipient) return overrideRecipient;
+  if (!TEST_RECIPIENT) return realAddress;
+  if (realAddress === TEST_RECIPIENT) return realAddress;
+  return TEST_RECIPIENT;
+}
+
+/**
+ * True when the message will be delivered somewhere other than its intended
+ * recipient.
+ */
+function isRedirected(intendedRecipient, actualRecipient) {
+  return Boolean(actualRecipient) && actualRecipient !== intendedRecipient;
+}
+
+// --- Helpers -----------------------------------------------------------------
 
 /**
  * Escape HTML special characters to prevent HTML/Email injection
@@ -49,18 +98,140 @@ function safeImageUrl(url) {
 }
 
 /**
- * Notify the relevant authority about a newly submitted report via Resend.
- *
- * @param {object} authority  - Prisma Authority record (.emailAddress)
- * @param {object} report     - Prisma Report record
- * @param {object} citizen    - Prisma User record (.name, .email)
+ * Subject prefix identifying the authority an alert was really addressed to.
  */
-async function sendAuthorityEmail(authority, report, citizen) {
-  if (!process.env.RESEND_API_KEY && !smtpTransporter) {
-    console.log('[email] Neither RESEND_API_KEY nor SMTP credentials configured. Skipping email dispatch.');
-    return;
+function testModeSubjectPrefix(intendedRecipient, actualRecipient) {
+  if (!isRedirected(intendedRecipient, actualRecipient)) return '';
+  return `[TEST → ${intendedRecipient}] `;
+}
+
+/**
+ * Visible banner explaining that the message was redirected.
+ */
+function testModeBanner(intendedRecipient, actualRecipient) {
+  if (!isRedirected(intendedRecipient, actualRecipient)) return '';
+  return `
+    <div style="background-color:#fff7ed; border:1px solid #fdba74; border-left:4px solid #f97316; padding:12px 14px; margin:0 0 18px; border-radius:6px; font-size:13px; color:#7c2d12;">
+      <strong>TEST MODE</strong> &mdash; this alert was addressed to
+      <strong>${escapeHtml(intendedRecipient)}</strong> but was redirected to
+      <strong>${escapeHtml(actualRecipient)}</strong>.
+      Clear <code>EMAIL_TEST_RECIPIENT</code> to deliver to the real recipient.
+    </div>`;
+}
+
+// --- Core sender -------------------------------------------------------------
+
+/**
+ * Send an email, preferring Resend and falling back to SMTP.
+ *
+ * Never throws — the returned object always describes the outcome so callers
+ * can surface delivery failures instead of silently swallowing them.
+ *
+ * @param {object}   opts
+ * @param {string}   opts.to       Intended recipient (redirected in test mode)
+ * @param {string}  [opts.recipient] Pre-resolved delivery address
+ * @param {string}   opts.subject
+ * @param {string}   opts.html
+ * @param {string}  [opts.label]   Human-readable label used in log lines
+ * @returns {Promise<{sent: boolean, provider: string, messageId: string|null,
+ *   error: string|null, intendedRecipient: string, recipient: string|null}>}
+ */
+async function sendEmail({ to, recipient, subject, html, label = 'email' }) {
+  const intendedRecipient = to;
+  const actualRecipient = recipient || resolveRecipient(to);
+  const fromAddress = process.env.EMAIL_FROM || 'FixGH Alerts <onboarding@resend.dev>';
+  let lastError = null;
+
+  if (!resend && !smtpTransporter) {
+    const error = 'No email provider configured. Set RESEND_API_KEY or the SMTP variables.';
+    console.error(`[email] ${label} skipped: ${error}`);
+    return {
+      sent: false,
+      provider: 'none',
+      messageId: null,
+      error,
+      intendedRecipient,
+      recipient: actualRecipient,
+    };
   }
 
+  // 1. Resend (primary)
+  if (resend) {
+    try {
+      const { data, error } = await resend.emails.send({
+        from: fromAddress,
+        to: actualRecipient,
+        subject,
+        html,
+      });
+
+      if (error) {
+        lastError = error.message;
+        console.error(`[email:resend] ${label} failed: ${error.message}`);
+      } else {
+        console.log(`[email:resend] ${label} delivered to ${actualRecipient} (message ${data?.id})`);
+        return {
+          sent: true,
+          provider: 'resend',
+          messageId: data?.id || null,
+          error: null,
+          intendedRecipient,
+          recipient: actualRecipient,
+        };
+      }
+    } catch (resendErr) {
+      lastError = resendErr.message;
+      console.error(`[email:resend] ${label} threw: ${resendErr.message}`);
+    }
+  }
+
+  // 2. SMTP fallback (previously unreachable — it returned early on Resend errors)
+  if (smtpTransporter) {
+    try {
+      const info = await smtpTransporter.sendMail({
+        from: fromAddress,
+        to: actualRecipient,
+        subject,
+        html,
+      });
+      console.log(`[email:smtp] ${label} delivered to ${actualRecipient} (message ${info.messageId})`);
+      return {
+        sent: true,
+        provider: 'smtp',
+        messageId: info.messageId || null,
+        error: null,
+        intendedRecipient,
+        recipient: actualRecipient,
+      };
+    } catch (smtpErr) {
+      lastError = smtpErr.message;
+      console.error(`[email:smtp] ${label} failed: ${smtpErr.message}`);
+    }
+  }
+
+  return {
+    sent: false,
+    provider: resend ? 'resend' : 'none',
+    messageId: null,
+    error: lastError || 'Unknown email delivery failure.',
+    intendedRecipient,
+    recipient: actualRecipient,
+  };
+}
+
+// --- Authority alert ---------------------------------------------------------
+
+/**
+ * Notify the relevant authority about a newly submitted report.
+ *
+ * @param {object} authority  - { emailAddress, departmentName }
+ * @param {object} report     - Report record
+ * @param {object} citizen    - User record ({ name, email })
+ * @returns {Promise<object>} Delivery result (see sendEmail)
+ */
+async function sendAuthorityEmail(authority, report, citizen) {
+  const intendedRecipient = authority.emailAddress;
+  const actualRecipient = resolveRecipient(intendedRecipient);
   const baseDashboardUrl = process.env.DASHBOARD_URL || 'https://fixgh.org';
   const reportUrl = `${baseDashboardUrl}/dashboard/report/${encodeURIComponent(report.id)}`;
 
@@ -72,19 +243,21 @@ async function sendAuthorityEmail(authority, report, citizen) {
   const safeCitizenEmail = escapeHtml(citizen.email || 'N/A');
   const imageUrl = safeImageUrl(report.imageUrl);
 
-  const locationText = report.latitude && report.longitude
-    ? `${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}`
-    : 'Not provided';
+  const hasCoords = report.latitude !== null && report.latitude !== undefined
+    && report.longitude !== null && report.longitude !== undefined;
+  const locationText = report.locationText
+    ? escapeHtml(report.locationText)
+    : hasCoords
+      ? `${Number(report.latitude).toFixed(5)}, ${Number(report.longitude).toFixed(5)}`
+      : 'Not provided';
 
-  // Resend default verified testing sender is onboarding@resend.dev
-  // In production with a custom verified domain: alerts@yourdomain.com
   const fromAddress = process.env.EMAIL_FROM || 'FixGH Alerts <onboarding@resend.dev>';
-  const subject = `[${safePriority}] Infrastructure Report: ${safeTitle}`;
+  const subject = `${testModeSubjectPrefix(intendedRecipient, actualRecipient)}[${safePriority}] Infrastructure Report: ${safeTitle}`;
 
-  const htmlContent = `
+  const htmlContent = `${testModeBanner(intendedRecipient, actualRecipient)}
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1e293b;">
       <h2 style="color: #0f172a; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px;">New Infrastructure Incident</h2>
-      
+
       <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
         <tr>
           <td style="padding: 8px 0; font-weight: bold; width: 120px; color: #64748b;">Issue:</td>
@@ -132,42 +305,22 @@ async function sendAuthorityEmail(authority, report, citizen) {
     </div>
   `;
 
-  // 1. Send via Resend SDK if configured (primary)
-  if (resend) {
-    try {
-      const { data, error } = await resend.emails.send({
-        from: fromAddress,
-        to: authority.emailAddress,
-        subject,
-        html: htmlContent,
-      });
-
-      if (error) {
-        console.error('[email:resend] Failed to send email:', error);
-      } else {
-        console.log('[email:resend] Authority alert email dispatched successfully. ID:', data?.id);
-      }
-      return;
-    } catch (resendErr) {
-      console.error('[email:resend] Exception while dispatching email:', resendErr.message);
-      return;
-    }
-  }
-
-  // 2. Fallback to standard SMTP if configured
-  if (smtpTransporter) {
-    try {
-      await smtpTransporter.sendMail({
-        from: fromAddress,
-        to: authority.emailAddress,
-        subject,
-        html: htmlContent,
-      });
-      console.log('[email:smtp] Authority alert email sent via SMTP.');
-    } catch (smtpErr) {
-      console.error('[email:smtp] SMTP dispatch error:', smtpErr.message);
-    }
-  }
+  return sendEmail({
+    to: intendedRecipient,
+    recipient: actualRecipient,
+    subject,
+    html: htmlContent,
+    label: `authority-alert(${authority.departmentName || 'authority'})`,
+  });
 }
 
-module.exports = { sendAuthorityEmail };
+module.exports = {
+  sendEmail,
+  sendAuthorityEmail,
+  escapeHtml,
+  resolveRecipient,
+  isRedirected,
+  testModeSubjectPrefix,
+  testModeBanner,
+  safeImageUrl,
+};

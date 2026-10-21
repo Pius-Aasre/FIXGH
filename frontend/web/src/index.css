@@ -1,15 +1,84 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #047857; /* Forest green */
-  --color-primary-dark: #065f46;
-  --color-secondary: #0f172a; /* Slate navy */
-  --font-sans: "Inter", system-ui, sans-serif;
+  /* Ghana flag palette — mirrors frontend/mobile */
+  --color-gh-red: #ce1126;
+  --color-gh-gold: #fcd116;
+  --color-gh-green: #006b3f;
+  --color-gh-black: #1a1a1a;
+
+  /* Brand aliases */
+  --color-primary: #006b3f;
+  --color-primary-dark: #005230;
+  --color-secondary: #0f172a;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
-body {
-  font-family: var(--font-sans);
-  background-color: #f8fafc;
-  margin: 0;
-  -webkit-font-smoothing: antialiased;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #f8fafc;
+    color: #0f172a;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Keyboard focus rings for accessibility (web-only concept) */
+  :focus-visible {
+    outline: 2px solid var(--color-gh-green);
+    outline-offset: 2px;
+  }
+
+  /* Hide scrollbars on the horizontal filter chips like the mobile app */
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes fixgh-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fixgh-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fixgh-fade-in 0.28s ease-out both;
+}
+
+.animate-pop-in {
+  animation: fixgh-pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-pop-in {
+    animation: none;
+  }
 }

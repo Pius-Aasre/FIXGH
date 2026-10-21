@@ -8,10 +8,10 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 // Startup Environment Validation
-const { getDb } = require('./lib/firebase');
-const db = getDb();
-if (!db) {
-  console.warn('[FIREBASE WARNING] Firestore is not connected yet. Please provide serviceAccountKey.json or set FIREBASE_* variables in .env');
+const prisma = require('./lib/prisma');
+
+if (!process.env.DATABASE_URL) {
+  console.warn('[DATABASE WARNING] DATABASE_URL is not defined — the Supabase Postgres connection will fail.');
 }
 
 if (!process.env.JWT_SECRET) {
@@ -25,7 +25,7 @@ const reportRoutes = require('./routes/reports');
 const newsRoutes = require('./routes/news');
 const adminRoutes = require('./routes/admin');
 const { initScheduledJobs } = require('./services/cron');
-const { apiLimiter, authLimiter, reportLimiter } = require('./middleware/rate-limit');
+const { apiLimiter, authLimiter } = require('./middleware/rate-limit');
 
 const app = express();
 
@@ -51,13 +51,27 @@ app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 app.use('/api', apiLimiter);
 
 // 5. Health Check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/api/health', async (req, res) => {
+  let database = 'down';
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    database = 'up';
+  } catch {
+    database = 'down';
+  }
+
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    database,
+  });
 });
 
 // 6. Routes with specific rate limiters
 app.use('/api/auth', authLimiter, authRoutes);
-app.use('/api', reportLimiter, reportRoutes);
+// The submission limiter is applied to POST /api/reports only — reading a
+// report must never be throttled as hard as filing one.
+app.use('/api', reportRoutes);
 app.use('/api', newsRoutes);
 app.use('/api/admin', adminRoutes);
 

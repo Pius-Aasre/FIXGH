@@ -50,3 +50,12 @@ example
 # generated native folders (Expo — in frontend/mobile)
 /frontend/mobile/ios
 /frontend/mobile/android
+
+# Local development database store (contains PII — never commit)
+/backend/data/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/

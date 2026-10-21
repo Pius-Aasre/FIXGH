@@ -3,12 +3,28 @@
 require('dotenv').config();
 const { classifyAndRoute } = require('../src/services/ai');
 const { runMonthlyDigest } = require('../src/services/monthly-digest');
-const { getDb } = require('../src/lib/firebase');
+const prisma = require('../src/lib/prisma');
+const bcrypt = require('bcrypt');
 
 async function testPipeline() {
   console.log('==================================================');
   console.log('FixGH AI Complaint Organization & Routing Test');
   console.log('==================================================\n');
+
+  // Reports require a valid author (foreign key), so make sure the test
+  // citizen account exists before inserting anything.
+  const testEmail = 'test_citizen_001@fixgh.test';
+  const testUser = await prisma.user.upsert({
+    where: { email: testEmail },
+    update: {},
+    create: {
+      name: 'Test Citizen',
+      email: testEmail,
+      passwordHash: await bcrypt.hash('TestPass123!', 12),
+      role: 'CITIZEN',
+    },
+  });
+  const testUserId = testUser.id;
 
   const testComplaints = [
     {
@@ -67,8 +83,6 @@ async function testPipeline() {
     },
   ];
 
-  const db = getDb();
-
   for (const item of testComplaints) {
     const aiResult = await classifyAndRoute(item.title, item.description, item.locationText);
     
@@ -84,20 +98,25 @@ async function testPipeline() {
     console.log(`   -> Validated: ${aiResult.isValid}`);
 
     // Insert sample complaint into database for the test
-    if (db && aiResult.isValid) {
-      await db.collection('reports').add({
-        title: item.title,
-        description: item.description,
-        locationText: item.locationText,
-        category: aiResult.category,
-        aiPriorityScore: aiResult.priority,
-        assignedAuthorityId: aiResult.authority.id,
-        assignedAuthorityName: aiResult.authority.name,
-        assignedAuthorityEmail: aiResult.authority.email,
-        filterStatus: 'APPROVED',
-        userId: 'test_citizen_001',
-        createdAt: new Date().toISOString(),
-      });
+    if (aiResult.isValid) {
+      try {
+        await prisma.report.create({
+          data: {
+            title: item.title,
+            description: item.description,
+            locationText: item.locationText,
+            category: aiResult.category,
+            aiPriorityScore: aiResult.priority,
+            assignedAuthorityId: aiResult.authority.id,
+            assignedAuthorityName: aiResult.authority.name,
+            assignedAuthorityEmail: aiResult.authority.email,
+            filterStatus: 'APPROVED',
+            userId: testUserId,
+          },
+        });
+      } catch (err) {
+        console.warn(`   [WARN] Could not persist sample report: ${err.message}`);
+      }
     }
   }
 
@@ -114,10 +133,13 @@ async function testPipeline() {
   }
 
   console.log('\nAI pipeline test completed successfully!');
+  await prisma.$disconnect();
   process.exit(0);
 }
 
-testPipeline().catch((err) => {
-  console.error('Test pipeline error:', err);
-  process.exit(1);
-});
+testPipeline()
+  .catch(async (err) => {
+    console.error('Test pipeline error:', err);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

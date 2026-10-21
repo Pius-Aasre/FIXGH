@@ -1,37 +1,32 @@
 'use strict';
 
-const { Resend } = require('resend');
-const nodemailer = require('nodemailer');
-const { getDb } = require('../lib/firebase');
-const { AUTHORITIES, AUTHORITIES_BY_EMAIL } = require('../constants/authorities');
+const prisma = require('../lib/prisma');
+const { AUTHORITIES } = require('../constants/authorities');
 const { generateMonthlyDigestSummary } = require('./ai');
+const {
+  sendEmail,
+  escapeHtml,
+  resolveRecipient,
+  testModeSubjectPrefix,
+  testModeBanner,
+} = require('./email');
 
-// Initialize Resend
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null;
+/**
+ * Convert a human month label (e.g. "October 2026") into a half-open date
+ * range [gte, lt) so the digest only covers reports raised in that month.
+ * Returns null when the label cannot be parsed (no filtering applied).
+ */
+function resolveMonthRange(targetMonth) {
+  const parsed = new Date(targetMonth);
+  if (isNaN(parsed.getTime())) return null;
 
-// Fallback SMTP
-const smtpTransporter = process.env.EMAIL_HOST && process.env.EMAIL_USER
-  ? nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: parseInt(process.env.EMAIL_PORT || '587', 10),
-      secure: process.env.EMAIL_PORT === '465',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    })
-  : null;
+  const year = parsed.getFullYear();
+  const month = parsed.getMonth();
 
-function escapeHtml(text) {
-  if (!text) return '';
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+  return {
+    gte: new Date(Date.UTC(year, month, 1)),
+    lt: new Date(Date.UTC(year, month + 1, 1)),
+  };
 }
 
 /**
@@ -238,11 +233,6 @@ function buildMonthlyDigestEmailHtml({
  * @param {string} [options.singleAuthorityId] - if specified, processes only this authority (1..40)
  */
 async function runMonthlyDigest(options = {}) {
-  const db = getDb();
-  if (!db) {
-    throw new Error('Database is not initialized.');
-  }
-
   const defaultMonth = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
   const targetMonth = (options && options.targetMonth) || defaultMonth;
   const testRecipient = (options && options.testRecipient) || process.env.MONTHLY_DIGEST_TEST_RECIPIENT || process.env.TEST_AUTHORITY_EMAIL;
@@ -257,14 +247,17 @@ async function runMonthlyDigest(options = {}) {
   }
   console.log(`======================================================\n`);
 
-  // 1. Fetch all reports from the database
-  const reportsSnapshot = await db.collection('reports').get();
-  const allReports = reportsSnapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
+  // 1. Fetch reports for the target month only.
+  //    Previously every digest re-sent the entire report history.
+  const monthRange = resolveMonthRange(targetMonth);
+  const whereClause = monthRange ? { createdAt: { gte: monthRange.gte, lt: monthRange.lt } } : {};
 
-  console.log(`[MONTHLY DIGEST] Retrieved ${allReports.length} total reports from database.`);
+  const allReports = await prisma.report.findMany({
+    where: whereClause,
+    orderBy: { createdAt: 'desc' },
+  });
+
+  console.log(`[MONTHLY DIGEST] Retrieved ${allReports.length} reports for ${targetMonth}${monthRange ? '' : ' (no date filter applied)'}.`);
 
   // 2. Filter out spam and separate by authority
   const validReports = [];
@@ -305,7 +298,6 @@ async function runMonthlyDigest(options = {}) {
   };
 
   const dashboardBaseUrl = process.env.DASHBOARD_URL || 'https://fixgh.org';
-  const fromAddress = process.env.EMAIL_FROM || 'FixGH Alerts <onboarding@resend.dev>';
 
   for (const authority of authoritiesToProcess) {
     const authEmailKey = authority.email.toLowerCase();
@@ -318,17 +310,17 @@ async function runMonthlyDigest(options = {}) {
     const aiSummary = await generateMonthlyDigestSummary(authority, targetMonth, authorityComplaints);
 
     // Build Email HTML
-    const emailHtml = buildMonthlyDigestEmailHtml({
+    const destinationEmail = resolveRecipient(authority.email, testRecipient);
+    const emailHtml = `${testModeBanner(authority.email, destinationEmail)}${buildMonthlyDigestEmailHtml({
       authority,
       monthLabel: targetMonth,
       complaints: authorityComplaints,
       filteredSpamCount: Math.round(totalSpamFiltered / 40),
       aiSummary,
       dashboardBaseUrl,
-    });
+    })}`;
 
-    const destinationEmail = testRecipient || authority.email;
-    const subject = `[FixGH Intelligence] ${targetMonth} Citizen Grievance Digest: ${authority.name} (${authorityComplaints.length} Reports)`;
+    const subject = `${testModeSubjectPrefix(authority.email, destinationEmail)}[FixGH Intelligence] ${targetMonth} Citizen Grievance Digest: ${authority.name} (${authorityComplaints.length} Reports)`;
 
     const detailItem = {
       authorityId: authority.id,
@@ -348,46 +340,38 @@ async function runMonthlyDigest(options = {}) {
       continue;
     }
 
-    // Live dispatch via Resend or SMTP
-    try {
-      if (resend) {
-        const { data, error } = await resend.emails.send({
-          from: fromAddress,
-          to: destinationEmail,
-          subject,
-          html: emailHtml,
-        });
+    // Live dispatch via the shared email service (Resend, falling back to SMTP)
+    const delivery = await sendEmail({
+      to: authority.email,
+      recipient: destinationEmail,
+      subject,
+      html: emailHtml,
+      label: `monthly-digest(${authority.name})`,
+    });
 
-        if (error) {
-          throw new Error(error.message);
+    if (delivery.sent) {
+      console.log(`   ✓ Dispatched via ${delivery.provider}. Message ID: ${delivery.messageId}`);
+      detailItem.status = 'SENT';
+      detailItem.messageId = delivery.messageId;
+      detailItem.provider = delivery.provider;
+      results.sentCount++;
+
+      // Stamp the covered reports so future runs can tell what has been sent
+      if (authorityComplaints.length > 0) {
+        try {
+          await prisma.report.updateMany({
+            where: { id: { in: authorityComplaints.map((c) => c.id) } },
+            data: { monthlyDigestSentAt: new Date() },
+          });
+        } catch (stampErr) {
+          console.warn(`   [WARN] Could not stamp reports for ${authority.name}: ${stampErr.message}`);
         }
-
-        console.log(`   ✓ Dispatched via Resend. Message ID: ${data?.id}`);
-        detailItem.status = 'SENT';
-        detailItem.messageId = data?.id;
-        results.sentCount++;
-      } else if (smtpTransporter) {
-        const info = await smtpTransporter.sendMail({
-          from: fromAddress,
-          to: destinationEmail,
-          subject,
-          html: emailHtml,
-        });
-
-        console.log(`   ✓ Dispatched via SMTP. Message ID: ${info.messageId}`);
-        detailItem.status = 'SENT';
-        detailItem.messageId = info.messageId;
-        results.sentCount++;
-      } else {
-        console.warn(`   [WARN] No Resend API key or SMTP config found. Marked simulated.`);
-        detailItem.status = 'NO_EMAIL_CONFIGURED';
-        results.skippedCount++;
       }
-    } catch (err) {
-      console.error(`   ✗ Dispatch failed for ${authority.name}:`, err.message);
+    } else {
+      console.error(`   ✗ Dispatch failed for ${authority.name}: ${delivery.error}`);
       detailItem.status = 'FAILED';
-      detailItem.error = err.message;
-      results.errors.push({ authority: authority.name, error: err.message });
+      detailItem.error = delivery.error;
+      results.errors.push({ authority: authority.name, error: delivery.error });
     }
 
     results.details.push(detailItem);
@@ -395,13 +379,15 @@ async function runMonthlyDigest(options = {}) {
 
   // 3. Record digest dispatch log into database
   try {
-    await db.collection('monthly_digest_logs').add({
-      targetMonth,
-      runTimestamp: new Date().toISOString(),
-      dryRun,
-      totalAuthorities: results.totalAuthorities,
-      sentCount: results.sentCount,
-      errorsCount: results.errors.length,
+    await prisma.monthlyDigestLog.create({
+      data: {
+        targetMonth,
+        runTimestamp: new Date(),
+        dryRun,
+        totalAuthorities: results.totalAuthorities,
+        sentCount: results.sentCount,
+        errorsCount: results.errors.length,
+      },
     });
   } catch (logErr) {
     console.warn('[MONTHLY DIGEST] Failed to persist log:', logErr.message);

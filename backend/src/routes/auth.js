@@ -3,7 +3,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { getDb } = require('../lib/firebase');
+const prisma = require('../lib/prisma');
 
 const router = express.Router();
 
@@ -46,34 +46,27 @@ router.post('/register', async (req, res) => {
 
   const cleanEmail = email.trim().toLowerCase();
   const cleanName = name.trim();
-  const db = getDb();
-
-  if (!db) {
-    return res.status(500).json({ error: 'Database service is temporarily unavailable.' });
-  }
 
   try {
-    // Check if user already exists in Firestore
-    const userSnapshot = await db
-      .collection('users')
-      .where('email', '==', cleanEmail)
-      .limit(1)
-      .get();
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+    });
 
-    if (!userSnapshot.empty) {
+    if (existingUser) {
       return res.status(409).json({ error: 'An account with this email already exists.' });
     }
 
     // 12 rounds of bcrypt
     const passwordHash = await bcrypt.hash(password, 12);
-    const createdAt = new Date().toISOString();
 
-    const docRef = await db.collection('users').add({
-      name: cleanName,
-      email: cleanEmail,
-      passwordHash,
-      role: 'CITIZEN',
-      createdAt,
+    const createdUser = await prisma.user.create({
+      data: {
+        name: cleanName,
+        email: cleanEmail,
+        passwordHash,
+        role: 'CITIZEN',
+      },
     });
 
     const secret = process.env.JWT_SECRET;
@@ -82,7 +75,7 @@ router.post('/register', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: docRef.id, email: cleanEmail, role: 'CITIZEN' },
+      { id: createdUser.id, email: cleanEmail, role: 'CITIZEN' },
       secret,
       { expiresIn: '7d', algorithm: 'HS256' }
     );
@@ -90,7 +83,7 @@ router.post('/register', async (req, res) => {
     return res.status(201).json({
       token,
       user: {
-        id: docRef.id,
+        id: createdUser.id,
         name: cleanName,
         email: cleanEmail,
         role: 'CITIZEN',
@@ -114,27 +107,17 @@ router.post('/login', async (req, res) => {
   }
 
   const cleanEmail = email.trim().toLowerCase();
-  const db = getDb();
-
-  if (!db) {
-    return res.status(500).json({ error: 'Database service is temporarily unavailable.' });
-  }
 
   try {
-    const userSnapshot = await db
-      .collection('users')
-      .where('email', '==', cleanEmail)
-      .limit(1)
-      .get();
+    const userData = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+    });
 
     // Constant-time comparison defense
-    if (userSnapshot.empty) {
+    if (!userData) {
       await bcrypt.compare(password, '$2b$12$e80x6kLd3XbYdO1V6s0k5.qF7J9qZ2z0W0x2e0w6qZ2z0W0x2e0w6');
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
-
-    const userDoc = userSnapshot.docs[0];
-    const userData = userDoc.data();
 
     const passwordMatch = await bcrypt.compare(password, userData.passwordHash);
     if (!passwordMatch) {
@@ -147,7 +130,7 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: userDoc.id, email: userData.email, role: userData.role || 'CITIZEN' },
+      { id: userData.id, email: userData.email, role: userData.role || 'CITIZEN' },
       secret,
       { expiresIn: '7d', algorithm: 'HS256' }
     );
@@ -155,7 +138,7 @@ router.post('/login', async (req, res) => {
     return res.json({
       token,
       user: {
-        id: userDoc.id,
+        id: userData.id,
         name: userData.name,
         email: userData.email,
         role: userData.role || 'CITIZEN',

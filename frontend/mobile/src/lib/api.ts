@@ -176,7 +176,7 @@ export const api = {
   },
   reports: {
     submit: (formData: FormData) =>
-      request<{ report: Report }>('/api/reports', {
+      request<SubmitReportResponse>('/api/reports', {
         method: 'POST',
         body: formData,
         isFormData: true,
@@ -199,13 +199,29 @@ export type Report = {
   id: string;
   title: string;
   description: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
+  /** True when the citizen attached a photo but storage rejected it. */
+  imageUploadFailed?: boolean;
   category?: string;
   aiPriorityScore?: string;
   status: 'PENDING' | 'VERIFIED' | 'IN_PROGRESS' | 'COMPLETED';
   latitude?: number;
   longitude?: number;
+  locationText?: string;
+  confidence?: number;
+  filterStatus?: 'APPROVED' | 'SPAM' | 'REJECTED';
+  assignedAuthorityName?: string;
+  assignedAuthorityEmail?: string;
+  /** Whether the assigned authority was actually alerted about this report. */
+  authorityNotified?: boolean;
   createdAt: string;
+};
+
+export type SubmitReportResponse = {
+  report: Report;
+  imageUploadFailed: boolean;
+  authorityNotified: boolean;
+  authorityEmailError?: string | null;
 };
 
 export type NewsItem = {

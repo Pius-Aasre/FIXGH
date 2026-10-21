@@ -2,8 +2,9 @@
 
 const express = require('express');
 const multer = require('multer');
-const { getDb } = require('../lib/firebase');
+const prisma = require('../lib/prisma');
 const authMiddleware = require('../middleware/auth');
+const { reportLimiter } = require('../middleware/rate-limit');
 const { uploadImage } = require('../services/cloudinary');
 const { classifyAndRoute } = require('../services/ai');
 const { sendAuthorityEmail } = require('../services/email');
@@ -15,6 +16,12 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/png',
   'image/webp',
 ]);
+
+const MIME_EXTENSIONS = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+};
 
 // Secure multer configuration: 5MB max, strictly image MIME types
 const upload = multer({
@@ -54,13 +61,8 @@ function uploadMiddleware(req, res, next) {
  * Multipart form: title, description, locationText, latitude, longitude, image (optional)
  * AI organizes, filters spam, categorizes, and assigns to the right authority among all 40 public bodies.
  */
-router.post('/reports', authMiddleware, uploadMiddleware, async (req, res) => {
+router.post('/reports', authMiddleware, reportLimiter, uploadMiddleware, async (req, res) => {
   const { title, description, locationText, latitude, longitude } = req.body || {};
-  const db = getDb();
-
-  if (!db) {
-    return res.status(500).json({ error: 'Database service is temporarily unavailable.' });
-  }
 
   // 1. Validate required text fields
   if (!title || typeof title !== 'string' || title.trim().length === 0) {
@@ -96,14 +98,8 @@ router.post('/reports', authMiddleware, uploadMiddleware, async (req, res) => {
   }
 
   try {
-    // 3. Upload to Cloudinary if image is attached
-    let imageUrl = null;
-    if (req.file) {
-      const safeFilename = `report-${Date.now()}.${req.file.mimetype.split('/')[1] || 'jpg'}`;
-      imageUrl = await uploadImage(req.file.buffer, safeFilename);
-    }
-
-    // 4. AI Complaint Filter, Categorization, and Authority Routing
+    // 3. AI Complaint Filter, Categorization, and Authority Routing.
+    //    Runs BEFORE the upload so that spam never consumes storage quota.
     const aiResult = await classifyAndRoute(
       title.trim(),
       description.trim(),
@@ -113,52 +109,107 @@ router.post('/reports', authMiddleware, uploadMiddleware, async (req, res) => {
     const filterStatus = aiResult.isValid ? 'APPROVED' : 'SPAM';
     const assignedAuthority = aiResult.authority;
 
-    // 5. Construct Report Record
-    const reportData = {
-      title: title.trim(),
-      description: description.trim(),
-      category: aiResult.category || 'General',
-      locationText: (locationText || '').trim() || null,
-      latitude: lat,
-      longitude: lng,
-      imageUrl,
-      aiPriorityScore: aiResult.priority || 'MEDIUM',
-      confidence: aiResult.confidence || 0.8,
-      status: 'PENDING',
-      filterStatus,
-      filterReason: aiResult.filterReason || null,
-      assignedAuthorityId: assignedAuthority ? assignedAuthority.id : null,
-      assignedAuthorityName: assignedAuthority ? assignedAuthority.name : null,
-      assignedAuthorityEmail: assignedAuthority ? assignedAuthority.email : null,
-      monthlyDigestSentAt: null,
-      userId: req.user.id,
-      createdAt: new Date().toISOString(),
-    };
+    // 4. Persist the report FIRST.
+    //    A storage outage must never destroy a citizen's report, so the row is
+    //    written before the photo is uploaded and the upload can fail safely.
+    const created = await prisma.report.create({
+      data: {
+        title: title.trim(),
+        description: description.trim(),
+        category: aiResult.category || 'General',
+        locationText: (locationText || '').trim() || null,
+        latitude: lat,
+        longitude: lng,
+        imageUrl: null,
+        imageUploadFailed: false,
+        aiPriorityScore: aiResult.priority || 'MEDIUM',
+        confidence: aiResult.confidence ?? 0.8,
+        status: 'PENDING',
+        filterStatus,
+        filterReason: aiResult.filterReason || null,
+        assignedAuthorityId: assignedAuthority ? assignedAuthority.id : null,
+        assignedAuthorityName: assignedAuthority ? assignedAuthority.name : null,
+        assignedAuthorityEmail: assignedAuthority ? assignedAuthority.email : null,
+        monthlyDigestSentAt: null,
+        userId: req.user.id,
+      },
+    });
 
-    const docRef = await db.collection('reports').add(reportData);
-    const report = { id: docRef.id, ...reportData };
+    // 5. Upload the photo. The report already exists, so a failure here only
+    //    costs the image — never the report.
+    let imageUrl = null;
+    let imageUploadFailed = false;
 
-    // 6. Optional instant notification for EMERGENCY level reports
-    if (aiResult.isValid && aiResult.priority === 'EMERGENCY' && assignedAuthority) {
+    if (req.file) {
       try {
-        const userDoc = await db.collection('users').doc(req.user.id).get();
-        const citizen = userDoc.exists
-          ? userDoc.data()
-          : { name: 'Citizen', email: req.user.email };
-        await sendAuthorityEmail(
-          { emailAddress: assignedAuthority.email, departmentName: assignedAuthority.name },
-          report,
-          citizen
-        );
-      } catch (emailErr) {
-        console.warn('Instant emergency authority email skipped:', emailErr.message);
+        const extension = MIME_EXTENSIONS[req.file.mimetype.toLowerCase()] || 'jpg';
+        const safeFilename = `report-${Date.now()}.${extension}`;
+        imageUrl = await uploadImage(req.file.buffer, safeFilename);
+      } catch (uploadErr) {
+        imageUploadFailed = true;
+        console.error('[REPORTS] Photo upload failed — report saved without image:', uploadErr.message);
+        await prisma.report.update({
+          where: { id: created.id },
+          data: { imageUploadFailed: true },
+        });
       }
     }
 
-    return res.status(201).json({ report });
+    const report = { ...created, imageUrl, imageUploadFailed };
+
+    // 6. Optional instant notification for EMERGENCY level reports
+    let authorityNotified = false;
+    let authorityEmailError = null;
+
+    if (aiResult.isValid && aiResult.priority === 'EMERGENCY' && assignedAuthority) {
+      try {
+        const citizen = await prisma.user.findUnique({ where: { id: req.user.id } });
+        const delivery = await sendAuthorityEmail(
+          { emailAddress: assignedAuthority.email, departmentName: assignedAuthority.name },
+          report,
+          citizen
+            ? { name: citizen.name, email: citizen.email }
+            : { name: 'Citizen', email: req.user.email }
+        );
+        authorityNotified = delivery.sent;
+        if (!delivery.sent) {
+          authorityEmailError = delivery.error;
+          console.warn('[REPORTS] Emergency authority email was NOT delivered:', delivery.error);
+        }
+      } catch (emailErr) {
+        authorityEmailError = emailErr.message;
+        console.warn('[REPORTS] Instant emergency authority email skipped:', emailErr.message);
+      }
+    }
+
+    // Persist the notification outcome so the authority dashboard can show
+    // whether the assigned body was actually alerted.
+    if (authorityNotified) {
+      try {
+        await prisma.report.update({
+          where: { id: created.id },
+          data: { authorityNotified: true, authorityNotifiedAt: new Date() },
+        });
+        report.authorityNotified = true;
+        report.authorityNotifiedAt = new Date();
+      } catch (notifyErr) {
+        console.warn('[REPORTS] Could not persist notification flag:', notifyErr.message);
+      }
+    }
+
+    return res.status(201).json({
+      report,
+      imageUploadFailed,
+      authorityNotified,
+      authorityEmailError,
+    });
   } catch (err) {
     console.error('Error creating report:', err.message);
-    return res.status(500).json({ error: 'Unable to process report. Please try again.' });
+    return res.status(500).json({
+      error: process.env.NODE_ENV === 'production'
+        ? 'Unable to process report. Please try again.'
+        : err.message || 'Unable to process report. Please try again.',
+    });
   }
 });
 
@@ -168,28 +219,61 @@ router.post('/reports', authMiddleware, uploadMiddleware, async (req, res) => {
  * Returns the reports submitted by the logged-in user
  */
 router.get('/reports/me', authMiddleware, async (req, res) => {
-  const db = getDb();
-  if (!db) {
-    return res.status(500).json({ error: 'Database service is temporarily unavailable.' });
-  }
-
   try {
-    const snapshot = await db
-      .collection('reports')
-      .where('userId', '==', req.user.id)
-      .orderBy('createdAt', 'desc')
-      .limit(100)
-      .get();
-
-    const reports = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const reports = await prisma.report.findMany({
+      where: { userId: req.user.id },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
 
     return res.json(reports);
   } catch (err) {
     console.error('Error fetching user reports:', err.message);
     return res.status(500).json({ error: 'Failed to retrieve reports.' });
+  }
+});
+
+/**
+ * GET /api/reports/:id
+ * Public read used by the "Open in Web Dashboard" deep link in authority emails.
+ * Deliberately unauthenticated, so the response is sanitized: the citizen's
+ * account details and e-mail address are never exposed.
+ */
+router.get('/reports/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!id || typeof id !== 'string' || id.length > 64) {
+    return res.status(400).json({ error: 'Invalid report id.' });
+  }
+
+  try {
+    const report = await prisma.report.findUnique({ where: { id } });
+    if (!report) {
+      return res.status(404).json({ error: 'Report not found.' });
+    }
+
+    return res.json({
+      id: report.id,
+      title: report.title,
+      description: report.description,
+      imageUrl: report.imageUrl,
+      imageUploadFailed: report.imageUploadFailed,
+      category: report.category,
+      aiPriorityScore: report.aiPriorityScore,
+      status: report.status,
+      latitude: report.latitude,
+      longitude: report.longitude,
+      locationText: report.locationText,
+      confidence: report.confidence,
+      filterStatus: report.filterStatus,
+      assignedAuthorityName: report.assignedAuthorityName,
+      assignedAuthorityEmail: report.assignedAuthorityEmail,
+      authorityNotified: report.authorityNotified,
+      authorityNotifiedAt: report.authorityNotifiedAt,
+      createdAt: report.createdAt,
+    });
+  } catch (err) {
+    console.error('Error fetching report:', err.message);
+    return res.status(500).json({ error: 'Failed to retrieve report.' });
   }
 });
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useAuth, authStore } from '../../lib/auth-store';
 import { api, Report } from '../../lib/api';
 
@@ -39,17 +39,34 @@ export default function ProfileScreen() {
   const [loadingReports, setLoadingReports] = useState(false);
   const [reportsError, setReportsError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoadingReports(true);
-    setReportsError(null);
-    api.reports
-      .mine()
-      .then(data => setReports(data))
-      .catch((err: any) => setReportsError(err?.message ?? 'Failed to load reports.'))
-      .finally(() => setLoadingReports(false));
-  }, [isAuthenticated]);
+  // The tab bar keeps this screen mounted, so a plain mount-time fetch would
+  // keep showing a stale list after the citizen files a new report.
+  // Refetch every time the tab regains focus.
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated) return;
+
+      let cancelled = false;
+      setLoadingReports(true);
+      setReportsError(null);
+
+      api.reports
+        .mine()
+        .then(data => {
+          if (!cancelled) setReports(Array.isArray(data) ? data : []);
+        })
+        .catch((err: any) => {
+          if (!cancelled) setReportsError(err?.message ?? 'Failed to load reports.');
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingReports(false);
+        });
+
+      return () => {
+        cancelled = true;
+      };
+    }, [isAuthenticated])
+  );
 
   function handleSignOut() {
     authStore.signOut();

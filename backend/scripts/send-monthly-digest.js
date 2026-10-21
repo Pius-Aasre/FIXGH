@@ -12,8 +12,14 @@ async function main() {
   const toIdx = args.findIndex((a) => a === '--to' || a === '--test-recipient');
   if (toIdx !== -1 && args[toIdx + 1]) {
     testRecipient = args[toIdx + 1];
-  } else if (process.env.MONTHLY_DIGEST_TEST_RECIPIENT || process.env.TEST_AUTHORITY_EMAIL) {
-    testRecipient = process.env.MONTHLY_DIGEST_TEST_RECIPIENT || process.env.TEST_AUTHORITY_EMAIL;
+  } else {
+    // Must match the resolution order used by the email service, otherwise the
+    // banner below would claim live delivery while the service redirects.
+    testRecipient =
+      process.env.EMAIL_TEST_RECIPIENT ||
+      process.env.MONTHLY_DIGEST_TEST_RECIPIENT ||
+      process.env.TEST_AUTHORITY_EMAIL ||
+      null;
   }
 
   let singleAuthorityId = null;
